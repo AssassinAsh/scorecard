@@ -7,6 +7,9 @@ import {
   calculateOvers,
   formatOvers,
   getBallDisplayText,
+  calculateRunRate,
+  calculateRequiredRunRate,
+  formatRunRate,
 } from "@/lib/cricket/scoring";
 import type { Ball, Player, ExtrasType, WicketType } from "@/types";
 
@@ -37,6 +40,25 @@ interface ScoringInterfaceProps {
   isSecondInnings: boolean;
   targetRuns: number | null;
   ballsRemaining: number | null;
+  firstInningsTeam: "A" | "B" | null;
+  liveBatting: {
+    playerId: string;
+    name: string;
+    runs: number;
+    balls: number;
+    fours: number;
+    sixes: number;
+    strikeRate: string;
+  }[];
+  liveBowling: {
+    playerId: string;
+    name: string;
+    overs: string;
+    maidens: number;
+    runs: number;
+    wickets: number;
+    economy: string;
+  }[];
 }
 
 export default function ScoringInterface({
@@ -57,6 +79,9 @@ export default function ScoringInterface({
   isSecondInnings,
   targetRuns,
   ballsRemaining,
+  firstInningsTeam,
+  liveBatting,
+  liveBowling,
 }: ScoringInterfaceProps) {
   // Get the latest ball to extract current players
   const latestBall = recentBalls[0];
@@ -135,6 +160,15 @@ export default function ScoringInterface({
   const [isRecording, setIsRecording] = useState(false);
   const [isAddingNewOverBowler, setIsAddingNewOverBowler] = useState(false);
 
+  // Collapsible full scorecard
+  const [showScorecard, setShowScorecard] = useState(false);
+  const [activeScorecardTeam, setActiveScorecardTeam] = useState<"A" | "B">(
+    battingTeam
+  );
+
+  const leftTeam: "A" | "B" = firstInningsTeam || "A";
+  const rightTeam: "A" | "B" = leftTeam === "A" ? "B" : "A";
+
   const isAddingBatter =
     addingPlayerFor === "striker" || addingPlayerFor === "nonStriker";
   const addPlayerTitle = isAddingBatter
@@ -178,6 +212,24 @@ export default function ScoringInterface({
   const nonStrikerName =
     battingPlayers.find((p) => p.id === nonStrikerId)?.name || "";
   const bowlerName = bowlingPlayers.find((p) => p.id === bowlerId)?.name || "";
+
+  // Run rates
+  const currentRunRate = calculateRunRate(currentScore, ballsBowled);
+  const currentRunRateText = formatRunRate(currentRunRate);
+  const requiredRunRateText =
+    isSecondInnings &&
+    targetRuns !== null &&
+    ballsRemaining !== null &&
+    ballsRemaining > 0
+      ? formatRunRate(
+          calculateRequiredRunRate(targetRuns, currentScore, ballsRemaining)
+        )
+      : "-";
+
+  // Live stats for current striker, non-striker and bowler
+  const strikerStats = liveBatting.find((b) => b.playerId === strikerId);
+  const nonStrikerStats = liveBatting.find((b) => b.playerId === nonStrikerId);
+  const bowlerStats = liveBowling.find((b) => b.playerId === bowlerId);
 
   // Handle adding new player
   const handleAddPlayer = async () => {
@@ -474,17 +526,35 @@ export default function ScoringInterface({
           </p>
         )}
 
+        {/* Run Rates */}
+        <p className="text-xs muted-text mb-2">
+          CRR: {currentRunRateText}
+          {isSecondInnings &&
+            targetRuns !== null &&
+            ballsRemaining !== null && (
+              <span> · RRR: {requiredRunRateText}</span>
+            )}
+        </p>
+
         {/* Batsmen Details */}
         {strikerId && (
           <div className="space-y-1.5 mb-3 text-sm">
             <div className="flex justify-between">
               <span className="font-medium">{strikerName} *</span>
-              <span className="muted-text">-</span>
+              <span className="muted-text">
+                {strikerStats
+                  ? `${strikerStats.runs} (${strikerStats.balls})`
+                  : "-"}
+              </span>
             </div>
             {nonStrikerId && (
               <div className="flex justify-between">
                 <span>{nonStrikerName}</span>
-                <span className="muted-text">-</span>
+                <span className="muted-text">
+                  {nonStrikerStats
+                    ? `${nonStrikerStats.runs} (${nonStrikerStats.balls})`
+                    : "-"}
+                </span>
               </div>
             )}
           </div>
@@ -499,7 +569,9 @@ export default function ScoringInterface({
             <div className="flex justify-between">
               <span className="font-medium">{bowlerName}</span>
               <span className="muted-text">
-                {calculateOvers(legalBallsInOver)}-0-0-0
+                {bowlerStats
+                  ? `${bowlerStats.overs}-${bowlerStats.maidens}-${bowlerStats.runs}-${bowlerStats.wickets}`
+                  : `${calculateOvers(legalBallsInOver)}-0-0-0`}
               </span>
             </div>
           </div>
@@ -554,6 +626,209 @@ export default function ScoringInterface({
             </p>
           )}
         </div>
+      </div>
+
+      {/* Collapsible Full Scorecard */}
+      <div className="rounded-lg">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between text-xs sm:text-sm px-2 py-2 rounded-md"
+          style={{
+            background: "var(--card-bg)",
+            border: "1px solid var(--border)",
+            color: "var(--foreground)",
+          }}
+          onClick={() => setShowScorecard((prev) => !prev)}
+        >
+          <span className="font-medium">Scorecard</span>
+          <span className="text-xs" style={{ color: "var(--muted)" }}>
+            {showScorecard ? "Hide" : "Show"}
+          </span>
+        </button>
+
+        {showScorecard && (
+          <div
+            className="mt-2 rounded-lg p-0 overflow-hidden"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            {/* Team Tabs */}
+            <div className="flex text-xs sm:text-sm">
+              <button
+                type="button"
+                onClick={() => setActiveScorecardTeam(leftTeam)}
+                className="flex-1 px-3 py-2 font-medium"
+                style={
+                  activeScorecardTeam === leftTeam
+                    ? {
+                        background: "var(--background)",
+                        color: "var(--foreground)",
+                        borderBottom: "2px solid var(--accent)",
+                      }
+                    : {
+                        background: "transparent",
+                        color: "var(--muted)",
+                        borderBottom: "1px solid var(--border)",
+                      }
+                }
+              >
+                {leftTeam === "A" ? teamAName : teamBName}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveScorecardTeam(rightTeam)}
+                className="flex-1 px-3 py-2 font-medium"
+                style={
+                  activeScorecardTeam === rightTeam
+                    ? {
+                        background: "var(--background)",
+                        color: "var(--foreground)",
+                        borderBottom: "2px solid var(--accent)",
+                      }
+                    : {
+                        background: "transparent",
+                        color: "var(--muted)",
+                        borderBottom: "1px solid var(--border)",
+                      }
+                }
+              >
+                {rightTeam === "A" ? teamAName : teamBName}
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-3 sm:p-4 space-y-4">
+              {activeScorecardTeam === battingTeam ? (
+                <>
+                  {/* Batting Table */}
+                  <div>
+                    <div
+                      className="mb-2 text-[11px] sm:text-xs"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "minmax(0,1.7fr) 0.4fr 0.4fr 0.4fr 0.4fr 0.6fr",
+                        columnGap: "0.5rem",
+                      }}
+                    >
+                      <span className="text-xs sm:text-sm font-medium">
+                        Batting
+                      </span>
+                      <span className="tabular-nums muted-text">R</span>
+                      <span className="tabular-nums muted-text">B</span>
+                      <span className="tabular-nums muted-text">4s</span>
+                      <span className="tabular-nums muted-text">6s</span>
+                      <span className="tabular-nums muted-text">SR</span>
+                    </div>
+                    <div className="space-y-1">
+                      {liveBatting
+                        .filter(
+                          (row) =>
+                            row.balls > 0 ||
+                            row.runs > 0 ||
+                            row.playerId === strikerId ||
+                            row.playerId === nonStrikerId
+                        )
+                        .map((row) => (
+                          <div
+                            key={row.playerId}
+                            className="text-[11px] sm:text-xs"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "minmax(0,1.7fr) 0.4fr 0.4fr 0.4fr 0.4fr 0.6fr",
+                                columnGap: "0.5rem",
+                              }}
+                            >
+                              <span>
+                                {row.name}
+                                {row.playerId === strikerId ? " *" : ""}
+                              </span>
+                              <span className="tabular-nums">{row.runs}</span>
+                              <span className="tabular-nums">{row.balls}</span>
+                              <span className="tabular-nums">{row.fours}</span>
+                              <span className="tabular-nums">{row.sixes}</span>
+                              <span className="tabular-nums">
+                                {row.strikeRate}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Separator */}
+                  <div
+                    className="border-t"
+                    style={{ borderColor: "var(--border)" }}
+                  />
+
+                  {/* Bowling Table */}
+                  {liveBowling.length > 0 && (
+                    <div>
+                      <div
+                        className="mb-2 text-[11px] sm:text-xs"
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns:
+                            "minmax(0,1.7fr) 0.5fr 0.5fr 0.5fr 0.5fr 0.7fr",
+                          columnGap: "0.5rem",
+                        }}
+                      >
+                        <span className="text-xs sm:text-sm font-medium">
+                          Bowling
+                        </span>
+                        <span className="tabular-nums muted-text">O</span>
+                        <span className="tabular-nums muted-text">M</span>
+                        <span className="tabular-nums muted-text">R</span>
+                        <span className="tabular-nums muted-text">W</span>
+                        <span className="tabular-nums muted-text">Econ</span>
+                      </div>
+                      <div className="space-y-1">
+                        {liveBowling.map((row) => (
+                          <div
+                            key={row.playerId}
+                            className="text-[11px] sm:text-xs"
+                            style={{ color: "var(--foreground)" }}
+                          >
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "minmax(0,1.7fr) 0.5fr 0.5fr 0.5fr 0.5fr 0.7fr",
+                                columnGap: "0.5rem",
+                              }}
+                            >
+                              <span>{row.name}</span>
+                              <span className="tabular-nums">{row.overs}</span>
+                              <span className="tabular-nums">
+                                {row.maidens}
+                              </span>
+                              <span className="tabular-nums">{row.runs}</span>
+                              <span className="tabular-nums">
+                                {row.wickets}
+                              </span>
+                              <span className="tabular-nums">
+                                {row.economy}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-xs sm:text-sm muted-text">Yet to bat.</div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Player Selection - Only show at innings start or after wicket */}

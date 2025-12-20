@@ -1,18 +1,21 @@
-import { ExtrasType, WicketType } from '@/types';
+import { ExtrasType, WicketType } from "@/types";
 
 /**
  * Determines if a ball is a legal delivery (counts toward the 6-ball over).
  * Wide and No-Ball are NOT legal deliveries and do not increment the ball count.
  */
 export function isLegalBall(extrasType: ExtrasType): boolean {
-  return extrasType !== 'Wide' && extrasType !== 'NoBall';
+  return extrasType !== "Wide" && extrasType !== "NoBall";
 }
 
 /**
  * Calculate total runs from a single ball delivery.
  * Total = runs off bat + extras runs
  */
-export function calculateBallRuns(runsOffBat: number, extrasRuns: number): number {
+export function calculateBallRuns(
+  runsOffBat: number,
+  extrasRuns: number
+): number {
   return runsOffBat + extrasRuns;
 }
 
@@ -29,19 +32,19 @@ export function shouldRotateStrike(
   extrasRuns: number
 ): boolean {
   // For Wide: strike does NOT rotate (batsmen don't run)
-  if (extrasType === 'Wide') {
+  if (extrasType === "Wide") {
     return false;
   }
 
   // For NoBall: only rotate if batsmen actually ran
   // (runs off bat OR bye/legbye runs)
-  if (extrasType === 'NoBall') {
+  if (extrasType === "NoBall") {
     const totalRunsRun = runsOffBat + extrasRuns;
     return totalRunsRun % 2 === 1;
   }
 
   // For Bye and LegBye: count those runs for strike rotation
-  if (extrasType === 'Bye' || extrasType === 'LegBye') {
+  if (extrasType === "Bye" || extrasType === "LegBye") {
     return extrasRuns % 2 === 1;
   }
 
@@ -71,7 +74,10 @@ export function isOverComplete(legalBallsInOver: number): boolean {
  * Get the next ball number for the current over.
  * This increments only for legal deliveries.
  */
-export function getNextBallNumber(currentBallNumber: number, isLegal: boolean): number {
+export function getNextBallNumber(
+  currentBallNumber: number,
+  isLegal: boolean
+): number {
   if (isLegal) {
     return currentBallNumber + 1;
   }
@@ -116,6 +122,42 @@ export function formatScore(runs: number, wickets: number): string {
 }
 
 /**
+ * Calculate current run rate (runs per over).
+ * Uses total runs (including extras) and legal balls bowled.
+ * Returns runs per over, or null if no balls bowled yet.
+ */
+export function calculateRunRate(
+  runs: number,
+  legalBalls: number
+): number | null {
+  if (legalBalls <= 0) return null;
+  return (runs * 6) / legalBalls;
+}
+
+/**
+ * Calculate required run rate for a chase.
+ * runsNeeded = targetRuns - currentRuns.
+ * Returns runs per over, or null if no balls remaining or no runs needed.
+ */
+export function calculateRequiredRunRate(
+  targetRuns: number,
+  currentRuns: number,
+  ballsRemaining: number
+): number | null {
+  const runsNeeded = targetRuns - currentRuns;
+  if (ballsRemaining <= 0 || runsNeeded <= 0) return null;
+  return (runsNeeded * 6) / ballsRemaining;
+}
+
+/**
+ * Format run rate to two decimals, or '-' if not available.
+ */
+export function formatRunRate(rr: number | null): string {
+  if (rr === null || !Number.isFinite(rr)) return "-";
+  return rr.toFixed(2);
+}
+
+/**
  * Get display text for a ball (for scorecard UI).
  * Examples: "4", "W", "1W", "2nb", ".", "1lb"
  */
@@ -126,35 +168,35 @@ export function getBallDisplayText(
   wicketType: WicketType
 ): string {
   // Wicket
-  if (wicketType !== 'None') {
+  if (wicketType !== "None") {
     const totalRuns = runsOffBat + extrasRuns;
-    return totalRuns > 0 ? `${totalRuns}W` : 'W';
+    return totalRuns > 0 ? `${totalRuns}W` : "W";
   }
 
   // Wide
-  if (extrasType === 'Wide') {
-    return extrasRuns > 0 ? `${extrasRuns}wd` : 'wd';
+  if (extrasType === "Wide") {
+    return extrasRuns > 0 ? `${extrasRuns}wd` : "wd";
   }
 
   // No Ball
-  if (extrasType === 'NoBall') {
+  if (extrasType === "NoBall") {
     const totalRuns = runsOffBat + extrasRuns;
-    return totalRuns > 0 ? `${totalRuns}nb` : 'nb';
+    return totalRuns > 0 ? `${totalRuns}nb` : "nb";
   }
 
   // Bye
-  if (extrasType === 'Bye') {
+  if (extrasType === "Bye") {
     return `${extrasRuns}b`;
   }
 
   // Leg Bye
-  if (extrasType === 'LegBye') {
+  if (extrasType === "LegBye") {
     return `${extrasRuns}lb`;
   }
 
   // Normal runs
   if (runsOffBat === 0) {
-    return '•'; // Dot ball
+    return "•"; // Dot ball
   }
 
   return runsOffBat.toString();
@@ -173,30 +215,33 @@ export function validateBallInput(
 ): string | null {
   // Runs off bat should be 0-6
   if (runsOffBat < 0 || runsOffBat > 6) {
-    return 'Runs off bat must be between 0 and 6';
+    return "Runs off bat must be between 0 and 6";
   }
 
   // Extras runs validation
-  if (extrasType === 'Wide' && (extrasRuns < 0 || extrasRuns > 6)) {
-    return 'Wide runs must be between 0 and 6';
+  if (extrasType === "Wide" && (extrasRuns < 0 || extrasRuns > 6)) {
+    return "Wide runs must be between 0 and 6";
   }
 
-  if ((extrasType === 'Bye' || extrasType === 'LegBye') && (extrasRuns < 1 || extrasRuns > 6)) {
-    return 'Bye/Leg Bye runs must be between 1 and 6';
+  if (
+    (extrasType === "Bye" || extrasType === "LegBye") &&
+    (extrasRuns < 1 || extrasRuns > 6)
+  ) {
+    return "Bye/Leg Bye runs must be between 1 and 6";
   }
 
-  if (extrasType === 'NoBall' && (extrasRuns < 0 || extrasRuns > 6)) {
-    return 'No Ball runs must be between 0 and 6';
+  if (extrasType === "NoBall" && (extrasRuns < 0 || extrasRuns > 6)) {
+    return "No Ball runs must be between 0 and 6";
   }
 
   // If wicket, must have dismissed player
-  if (wicketType !== 'None' && !dismissedPlayer) {
-    return 'Must select dismissed player for a wicket';
+  if (wicketType !== "None" && !dismissedPlayer) {
+    return "Must select dismissed player for a wicket";
   }
 
   // Wide cannot have runs off bat
-  if (extrasType === 'Wide' && runsOffBat > 0) {
-    return 'Cannot score runs off bat on a wide';
+  if (extrasType === "Wide" && runsOffBat > 0) {
+    return "Cannot score runs off bat on a wide";
   }
 
   return null;
