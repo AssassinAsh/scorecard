@@ -224,6 +224,150 @@ export default async function ScoringPage({
       .filter((row): row is LiveBowlingRow => row !== null);
   }
 
+  // First innings scorecard data (for display during second innings)
+  let firstInningsBatting: LiveBattingRow[] = [];
+  let firstInningsBowling: LiveBowlingRow[] = [];
+
+  if (firstCompletedInnings) {
+    const firstDetail = await getInningsWithBalls(firstCompletedInnings.id);
+
+    if (firstDetail && firstDetail.overs) {
+      const battingPlayersForFirst = players.filter(
+        (p) => p.team === firstCompletedInnings.batting_team
+      );
+      const bowlingPlayersForFirst = players.filter(
+        (p) => p.team === firstCompletedInnings.bowling_team
+      );
+
+      const firstBattingStats = new Map<
+        string,
+        { runs: number; balls: number; fours: number; sixes: number }
+      >();
+      const firstBowlingStats = new Map<
+        string,
+        {
+          runs: number;
+          legalBalls: number;
+          maidens: number;
+          wickets: number;
+        }
+      >();
+
+      const formatStrikeRateFirst = (runs: number, balls: number): string => {
+        if (balls === 0) return "-";
+        return ((runs * 100) / balls).toFixed(2);
+      };
+
+      const formatEconomyFirst = (runs: number, legalBalls: number): string => {
+        if (legalBalls === 0) return "-";
+        return ((runs * 6) / legalBalls).toFixed(2);
+      };
+
+      for (const over of firstDetail.overs) {
+        const overBalls = over.balls || [];
+        const bowlerId: string | null = over.bowler_id;
+
+        // Batting stats
+        for (const ball of overBalls) {
+          const strikerId: string = ball.striker_id;
+          const runsOffBat: number = ball.runs_off_bat;
+          const legal = isLegalBall(ball.extras_type);
+
+          if (!firstBattingStats.has(strikerId)) {
+            firstBattingStats.set(strikerId, {
+              runs: 0,
+              balls: 0,
+              fours: 0,
+              sixes: 0,
+            });
+          }
+          const bs = firstBattingStats.get(strikerId)!;
+          bs.runs += runsOffBat;
+          if (legal) {
+            bs.balls += 1;
+          }
+          if (runsOffBat === 4) bs.fours += 1;
+          if (runsOffBat === 6) bs.sixes += 1;
+        }
+
+        // Bowling stats per over
+        if (bowlerId) {
+          if (!firstBowlingStats.has(bowlerId)) {
+            firstBowlingStats.set(bowlerId, {
+              runs: 0,
+              legalBalls: 0,
+              maidens: 0,
+              wickets: 0,
+            });
+          }
+          const bowlerStats = firstBowlingStats.get(bowlerId)!;
+
+          let runsThisOver = 0;
+          let legalBallsThisOver = 0;
+          let wicketsThisOver = 0;
+
+          for (const ball of overBalls) {
+            const runsConceded = calculateBallRuns(
+              ball.runs_off_bat,
+              ball.extras_runs
+            );
+            runsThisOver += runsConceded;
+
+            const legal = isLegalBall(ball.extras_type);
+            if (legal) {
+              legalBallsThisOver += 1;
+            }
+
+            if (ball.wicket_type !== "None" && ball.wicket_type !== "RunOut") {
+              wicketsThisOver += 1;
+            }
+          }
+
+          bowlerStats.runs += runsThisOver;
+          bowlerStats.legalBalls += legalBallsThisOver;
+          bowlerStats.wickets += wicketsThisOver;
+          if (runsThisOver === 0 && legalBallsThisOver === 6) {
+            bowlerStats.maidens += 1;
+          }
+        }
+      }
+
+      firstInningsBatting = battingPlayersForFirst
+        .slice()
+        .sort((a, b) => a.batting_order - b.batting_order)
+        .map((player) => {
+          const s =
+            firstBattingStats.get(player.id) ||
+            ({ runs: 0, balls: 0, fours: 0, sixes: 0 } as const);
+          return {
+            playerId: player.id,
+            name: player.name,
+            runs: s.runs,
+            balls: s.balls,
+            fours: s.fours,
+            sixes: s.sixes,
+            strikeRate: formatStrikeRateFirst(s.runs, s.balls),
+          };
+        });
+
+      firstInningsBowling = Array.from(firstBowlingStats.entries())
+        .map(([playerId, s]) => {
+          const player = bowlingPlayersForFirst.find((p) => p.id === playerId);
+          if (!player) return null;
+          return {
+            playerId,
+            name: player.name,
+            overs: formatOvers(calculateOvers(s.legalBalls)),
+            maidens: s.maidens,
+            runs: s.runs,
+            wickets: s.wickets,
+            economy: formatEconomyFirst(s.runs, s.legalBalls),
+          };
+        })
+        .filter((row): row is LiveBowlingRow => row !== null);
+    }
+  }
+
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Sticky Header */}
@@ -322,6 +466,9 @@ export default async function ScoringPage({
             firstInningsTeam={firstInningsTeam}
             liveBatting={liveBatting}
             liveBowling={liveBowling}
+            firstInningsBatting={firstInningsBatting}
+            firstInningsBowling={firstInningsBowling}
+            readOnly={false}
           />
         ) : (
           <div

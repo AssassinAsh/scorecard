@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { recordBall, startNewOver } from "@/app/actions/scoring";
+import {
+  recordBall,
+  startNewOver,
+  deleteLastBall,
+} from "@/app/actions/scoring";
 import { createPlayer } from "@/app/actions/matches";
 import {
   calculateOvers,
@@ -59,6 +63,25 @@ interface ScoringInterfaceProps {
     wickets: number;
     economy: string;
   }[];
+  firstInningsBatting: {
+    playerId: string;
+    name: string;
+    runs: number;
+    balls: number;
+    fours: number;
+    sixes: number;
+    strikeRate: string;
+  }[];
+  firstInningsBowling: {
+    playerId: string;
+    name: string;
+    overs: string;
+    maidens: number;
+    runs: number;
+    wickets: number;
+    economy: string;
+  }[];
+  readOnly?: boolean;
 }
 
 export default function ScoringInterface({
@@ -82,6 +105,9 @@ export default function ScoringInterface({
   firstInningsTeam,
   liveBatting,
   liveBowling,
+  firstInningsBatting,
+  firstInningsBowling,
+  readOnly = false,
 }: ScoringInterfaceProps) {
   // Get the latest ball to extract current players
   const latestBall = recentBalls[0];
@@ -160,6 +186,11 @@ export default function ScoringInterface({
   const [isRecording, setIsRecording] = useState(false);
   const [isAddingNewOverBowler, setIsAddingNewOverBowler] = useState(false);
 
+  // Undo / strike change modals
+  const [showDeleteLastBallModal, setShowDeleteLastBallModal] = useState(false);
+  const [isDeletingLastBall, setIsDeletingLastBall] = useState(false);
+  const [showChangeStrikeModal, setShowChangeStrikeModal] = useState(false);
+
   // Collapsible full scorecard
   const [showScorecard, setShowScorecard] = useState(false);
   const [activeScorecardTeam, setActiveScorecardTeam] = useState<"A" | "B">(
@@ -230,6 +261,23 @@ export default function ScoringInterface({
   const strikerStats = liveBatting.find((b) => b.playerId === strikerId);
   const nonStrikerStats = liveBatting.find((b) => b.playerId === nonStrikerId);
   const bowlerStats = liveBowling.find((b) => b.playerId === bowlerId);
+
+  // Scorecard data depending on selected team
+  const isActiveCurrentBatting = activeScorecardTeam === battingTeam;
+  const isActiveFirstInningsTeam =
+    firstInningsTeam !== null && activeScorecardTeam === firstInningsTeam;
+
+  const scorecardBatting = isActiveCurrentBatting
+    ? liveBatting
+    : isActiveFirstInningsTeam
+    ? firstInningsBatting
+    : [];
+
+  const scorecardBowling = isActiveCurrentBatting
+    ? liveBowling
+    : isActiveFirstInningsTeam
+    ? firstInningsBowling
+    : [];
 
   // Handle adding new player
   const handleAddPlayer = async () => {
@@ -325,6 +373,28 @@ export default function ScoringInterface({
   const handleStartNewOver = () => {
     setNewOverBowlerId("");
     setShowNewOverModal(true);
+  };
+
+  // Delete the most recent delivery
+  const handleDeleteLastBall = async () => {
+    if (!inningsId) return;
+    setIsDeletingLastBall(true);
+    try {
+      const result = await deleteLastBall(inningsId);
+      if (!result || (result as any).error) {
+        alert((result as any)?.error || "Error deleting last delivery");
+        return;
+      }
+      // Reload to reflect updated aggregates and over view
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    } catch (error) {
+      alert("Error deleting last delivery: " + error);
+    } finally {
+      setIsDeletingLastBall(false);
+      setShowDeleteLastBallModal(false);
+    }
   };
 
   // Confirm new over after bowler selected
@@ -518,6 +588,14 @@ export default function ScoringInterface({
           </div>
         </div>
 
+        {/* Toss Info */}
+        {tossWinner && tossDecision && (
+          <p className="text-xs muted-text mb-2">
+            {tossWinner === "A" ? teamAName : teamBName} won the toss and chose
+            to {tossDecision === "Bat" ? "bat" : "bowl"}.
+          </p>
+        )}
+
         {/* Second Innings Target / Chase Info */}
         {isSecondInnings && targetRuns !== null && ballsRemaining !== null && (
           <p className="text-sm muted-text mb-2">
@@ -700,7 +778,7 @@ export default function ScoringInterface({
 
             {/* Content */}
             <div className="p-3 sm:p-4 space-y-4">
-              {activeScorecardTeam === battingTeam ? (
+              {scorecardBatting.length > 0 ? (
                 <>
                   {/* Batting Table */}
                   <div>
@@ -723,42 +801,43 @@ export default function ScoringInterface({
                       <span className="tabular-nums muted-text">SR</span>
                     </div>
                     <div className="space-y-1">
-                      {liveBatting
-                        .filter(
-                          (row) =>
-                            row.balls > 0 ||
-                            row.runs > 0 ||
-                            row.playerId === strikerId ||
-                            row.playerId === nonStrikerId
-                        )
-                        .map((row) => (
+                      {(isActiveCurrentBatting
+                        ? scorecardBatting.filter(
+                            (row) =>
+                              row.balls > 0 ||
+                              row.runs > 0 ||
+                              row.playerId === strikerId ||
+                              row.playerId === nonStrikerId
+                          )
+                        : scorecardBatting
+                      ).map((row) => (
+                        <div
+                          key={row.playerId}
+                          className="text-[11px] sm:text-xs"
+                          style={{ color: "var(--foreground)" }}
+                        >
                           <div
-                            key={row.playerId}
-                            className="text-[11px] sm:text-xs"
-                            style={{ color: "var(--foreground)" }}
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                "minmax(0,1.7fr) 0.4fr 0.4fr 0.4fr 0.4fr 0.6fr",
+                              columnGap: "0.5rem",
+                            }}
                           >
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns:
-                                  "minmax(0,1.7fr) 0.4fr 0.4fr 0.4fr 0.4fr 0.6fr",
-                                columnGap: "0.5rem",
-                              }}
-                            >
-                              <span>
-                                {row.name}
-                                {row.playerId === strikerId ? " *" : ""}
-                              </span>
-                              <span className="tabular-nums">{row.runs}</span>
-                              <span className="tabular-nums">{row.balls}</span>
-                              <span className="tabular-nums">{row.fours}</span>
-                              <span className="tabular-nums">{row.sixes}</span>
-                              <span className="tabular-nums">
-                                {row.strikeRate}
-                              </span>
-                            </div>
+                            <span>
+                              {row.name}
+                              {row.playerId === strikerId ? " *" : ""}
+                            </span>
+                            <span className="tabular-nums">{row.runs}</span>
+                            <span className="tabular-nums">{row.balls}</span>
+                            <span className="tabular-nums">{row.fours}</span>
+                            <span className="tabular-nums">{row.sixes}</span>
+                            <span className="tabular-nums">
+                              {row.strikeRate}
+                            </span>
                           </div>
-                        ))}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -769,7 +848,7 @@ export default function ScoringInterface({
                   />
 
                   {/* Bowling Table */}
-                  {liveBowling.length > 0 && (
+                  {scorecardBowling.length > 0 && (
                     <div>
                       <div
                         className="mb-2 text-[11px] sm:text-xs"
@@ -790,7 +869,7 @@ export default function ScoringInterface({
                         <span className="tabular-nums muted-text">Econ</span>
                       </div>
                       <div className="space-y-1">
-                        {liveBowling.map((row) => (
+                        {scorecardBowling.map((row) => (
                           <div
                             key={row.playerId}
                             className="text-[11px] sm:text-xs"
@@ -831,8 +910,8 @@ export default function ScoringInterface({
         )}
       </div>
 
-      {/* Player Selection - Only show at innings start or after wicket */}
-      {((ballsBowled === 0 && !currentOverId) || !strikerId) && (
+      {/* Player Selection - Only for scorers */}
+      {!readOnly && ((ballsBowled === 0 && !currentOverId) || !strikerId) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
@@ -1023,8 +1102,8 @@ export default function ScoringInterface({
         </div>
       )}
 
-      {/* New Over Prompt */}
-      {needsNewOver && (
+      {/* New Over Prompt - Only for scorers */}
+      {!readOnly && needsNewOver && (
         <div
           className="rounded-lg p-4 text-center"
           style={{
@@ -1048,8 +1127,8 @@ export default function ScoringInterface({
         </div>
       )}
 
-      {/* Main Action Buttons */}
-      {currentOverId && strikerId && nonStrikerId && bowlerId && (
+      {/* Main Action Buttons - Only for scorers */}
+      {!readOnly && currentOverId && strikerId && nonStrikerId && bowlerId && (
         <div
           className="rounded-lg p-4"
           style={{
@@ -1072,12 +1151,10 @@ export default function ScoringInterface({
               ➕ Add Next Ball
             </button>
 
-            {/* Edit Previous Ball Button */}
+            {/* Delete Last Delivery Button */}
             {recentBalls.length > 0 && (
               <button
-                onClick={() => {
-                  alert("Edit previous ball feature coming soon!");
-                }}
+                onClick={() => setShowDeleteLastBallModal(true)}
                 disabled={isRecording}
                 className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
                 style={{
@@ -1086,15 +1163,31 @@ export default function ScoringInterface({
                   color: "var(--foreground)",
                 }}
               >
-                ✏️ Edit Previous Ball
+                🗑 Delete Last Delivery
+              </button>
+            )}
+
+            {/* Change Strike Button */}
+            {strikerId && nonStrikerId && (
+              <button
+                onClick={() => setShowChangeStrikeModal(true)}
+                disabled={isRecording}
+                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                ⇄ Change Strike
               </button>
             )}
           </div>
         </div>
       )}
 
-      {/* Ball Type Selection Modal - Shown when Add Next Ball is clicked */}
-      {showActionModal && !currentAction && (
+      {/* Ball Type Selection Modal - Only for scorers */}
+      {!readOnly && showActionModal && !currentAction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
@@ -1208,114 +1301,123 @@ export default function ScoringInterface({
         </div>
       )}
 
-      {/* Runs/Extras Selection Modal */}
-      {showActionModal && currentAction && currentAction !== "wicket" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div
-            className="max-w-md w-full rounded-lg p-6"
-            style={{
-              background: "var(--card-bg)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <h3 className="text-lg font-medium mb-4">
-              {currentAction === "runs" && "Select Runs"}
-              {currentAction === "wide" && "Wide + Runs"}
-              {currentAction === "noball" && "No Ball + Runs"}
-              {currentAction === "bye" && "Bye Runs"}
-              {currentAction === "legbye" && "Leg Bye Runs"}
-            </h3>
+      {/* Runs/Extras Selection Modal - Only for scorers */}
+      {!readOnly &&
+        showActionModal &&
+        currentAction &&
+        currentAction !== "wicket" && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div
+              className="max-w-md w-full rounded-lg p-6"
+              style={{
+                background: "var(--card-bg)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <h3 className="text-lg font-medium mb-4">
+                {currentAction === "runs" && "Select Runs"}
+                {currentAction === "wide" && "Wide + Runs"}
+                {currentAction === "noball" && "No Ball + Runs"}
+                {currentAction === "bye" && "Bye Runs"}
+                {currentAction === "legbye" && "Leg Bye Runs"}
+              </h3>
 
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {currentAction === "runs"
-                ? [0, 1, 2, 3, 4, 5, 6].map((run) => (
-                    <button
-                      key={run}
-                      onClick={() => setSelectedRuns(run)}
-                      className="py-3 rounded-md text-lg font-bold"
-                      style={{
-                        background:
-                          selectedRuns === run
-                            ? "var(--accent)"
-                            : "var(--background)",
-                        color:
-                          selectedRuns === run ? "white" : "var(--foreground)",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      {run}
-                    </button>
-                  ))
-                : currentAction === "bye" || currentAction === "legbye"
-                ? [1, 2, 3, 4, 5].map((run) => (
-                    <button
-                      key={run}
-                      onClick={() => setSelectedRuns(run)}
-                      className="py-3 rounded-md text-sm font-semibold"
-                      style={{
-                        background:
-                          selectedRuns === run
-                            ? "var(--accent)"
-                            : "var(--background)",
-                        color:
-                          selectedRuns === run ? "white" : "var(--foreground)",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      {run}
-                    </button>
-                  ))
-                : [0, 1, 2, 3, 4, 5, 6, 7, 8].map((run) => (
-                    <button
-                      key={run}
-                      onClick={() => setSelectedRuns(run)}
-                      className="py-3 rounded-md text-sm font-semibold"
-                      style={{
-                        background:
-                          selectedRuns === run
-                            ? "var(--accent)"
-                            : "var(--background)",
-                        color:
-                          selectedRuns === run ? "white" : "var(--foreground)",
-                        border: "1px solid var(--border)",
-                      }}
-                    >
-                      {run}
-                    </button>
-                  ))}
-            </div>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {currentAction === "runs"
+                  ? [0, 1, 2, 3, 4, 5, 6].map((run) => (
+                      <button
+                        key={run}
+                        onClick={() => setSelectedRuns(run)}
+                        className="py-3 rounded-md text-lg font-bold"
+                        style={{
+                          background:
+                            selectedRuns === run
+                              ? "var(--accent)"
+                              : "var(--background)",
+                          color:
+                            selectedRuns === run
+                              ? "white"
+                              : "var(--foreground)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        {run}
+                      </button>
+                    ))
+                  : currentAction === "bye" || currentAction === "legbye"
+                  ? [1, 2, 3, 4, 5].map((run) => (
+                      <button
+                        key={run}
+                        onClick={() => setSelectedRuns(run)}
+                        className="py-3 rounded-md text-sm font-semibold"
+                        style={{
+                          background:
+                            selectedRuns === run
+                              ? "var(--accent)"
+                              : "var(--background)",
+                          color:
+                            selectedRuns === run
+                              ? "white"
+                              : "var(--foreground)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        {run}
+                      </button>
+                    ))
+                  : [0, 1, 2, 3, 4, 5, 6, 7, 8].map((run) => (
+                      <button
+                        key={run}
+                        onClick={() => setSelectedRuns(run)}
+                        className="py-3 rounded-md text-sm font-semibold"
+                        style={{
+                          background:
+                            selectedRuns === run
+                              ? "var(--accent)"
+                              : "var(--background)",
+                          color:
+                            selectedRuns === run
+                              ? "white"
+                              : "var(--foreground)",
+                          border: "1px solid var(--border)",
+                        }}
+                      >
+                        {run}
+                      </button>
+                    ))}
+              </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleRecordBall(false)}
-                disabled={isRecording}
-                className="flex-1 py-2 rounded-md text-sm font-medium text-white"
-                style={{ background: "var(--accent)" }}
-              >
-                Confirm
-              </button>
-              <button
-                onClick={() => {
-                  setShowActionModal(false);
-                  setCurrentAction(null);
-                  setSelectedRuns(0);
-                }}
-                className="flex-1 py-2 rounded-md text-sm font-medium"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-              >
-                Cancel
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleRecordBall(false)}
+                  disabled={isRecording}
+                  className="flex-1 py-2 rounded-md text-sm font-medium text-white"
+                  style={{ background: "var(--accent)" }}
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => {
+                    setShowActionModal(false);
+                    setCurrentAction(null);
+                    setSelectedRuns(0);
+                  }}
+                  className="flex-1 py-2 rounded-md text-sm font-medium"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Wicket Type Modal */}
-      {showActionModal && currentAction === "wicket" && (
+      {/* Wicket Type Modal - Only for scorers */}
+      {!readOnly && showActionModal && currentAction === "wicket" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
@@ -1436,8 +1538,8 @@ export default function ScoringInterface({
         </div>
       )}
 
-      {/* Wicket Details Modal (for Caught/Stumped/Run Out) */}
-      {showWicketTypeModal && (
+      {/* Wicket Details Modal (for Caught/Stumped/Run Out) - Only for scorers */}
+      {!readOnly && showWicketTypeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
@@ -1577,8 +1679,8 @@ export default function ScoringInterface({
         </div>
       )}
 
-      {/* Add Player Modal */}
-      {showAddPlayer && (
+      {/* Add Player Modal - Only for scorers */}
+      {!readOnly && showAddPlayer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
@@ -1628,8 +1730,8 @@ export default function ScoringInterface({
         </div>
       )}
 
-      {/* New Over Modal - Bowler Selection */}
-      {showNewOverModal && (
+      {/* New Over Modal - Bowler Selection - Only for scorers */}
+      {!readOnly && showNewOverModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
@@ -1699,6 +1801,102 @@ export default function ScoringInterface({
                   setShowNewOverModal(false);
                   setNewOverBowlerId("");
                 }}
+                className="flex-1 py-2 rounded-md text-sm font-medium"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Last Delivery Confirmation - Only for scorers */}
+      {!readOnly && showDeleteLastBallModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div
+            className="max-w-md w-full rounded-lg p-6"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h3 className="text-lg font-medium mb-4">Delete Last Delivery</h3>
+            <p className="text-sm muted-text mb-4">
+              Are you sure you want to delete the most recent delivery? This
+              will remove it from the database and restore the previous
+              scorecard state.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteLastBall}
+                disabled={isDeletingLastBall}
+                className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
+                style={{ background: "var(--danger)" }}
+              >
+                {isDeletingLastBall ? "Deleting..." : "Delete"}
+              </button>
+              <button
+                onClick={() => setShowDeleteLastBallModal(false)}
+                disabled={isDeletingLastBall}
+                className="flex-1 py-2 rounded-md text-sm font-medium"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Strike Confirmation - Only for scorers */}
+      {!readOnly && showChangeStrikeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div
+            className="max-w-md w-full rounded-lg p-6"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h3 className="text-lg font-medium mb-4">Change Strike</h3>
+            <p className="text-sm muted-text mb-4">
+              Manually swap striker and non-striker? Use this only to correct a
+              strike error.
+            </p>
+            <div className="mb-4 text-sm">
+              <p>
+                Current striker:{" "}
+                <span className="font-medium">{strikerName}</span>
+              </p>
+              <p>
+                Current non-striker:{" "}
+                <span className="font-medium">{nonStrikerName}</span>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const temp = strikerId;
+                  setStrikerId(nonStrikerId);
+                  setNonStrikerId(temp);
+                  setShowChangeStrikeModal(false);
+                }}
+                className="flex-1 py-2 rounded-md text-sm font-medium text-white"
+                style={{ background: "var(--accent)" }}
+              >
+                Confirm Swap
+              </button>
+              <button
+                onClick={() => setShowChangeStrikeModal(false)}
                 className="flex-1 py-2 rounded-md text-sm font-medium"
                 style={{
                   background: "var(--background)",

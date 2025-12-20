@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import { getCurrentInnings, getAllInnings } from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
-import StartMatchButton from "@/components/StartMatchButton";
 import StartSecondInningsButton from "@/components/StartSecondInningsButton";
 
 export default async function MatchSetupPage({
@@ -59,34 +58,10 @@ export default async function MatchSetupPage({
 
       <main className="max-w-4xl mx-auto px-4 py-4">
         <div className="space-y-3">
-          {/* Start Match Section - First Innings */}
-          {!hasInnings &&
-            completedInnings.length === 0 &&
-            match.status === "Upcoming" && (
-              <div
-                className="rounded-lg p-6"
-                style={{
-                  background: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                <h2 className="text-base font-medium mb-2">Start Match</h2>
-                <p className="text-sm muted-text mb-4">
-                  Start the first innings. Players and toss details can be added
-                  during scoring.
-                </p>
-                <StartMatchButton
-                  matchId={id}
-                  teamAName={match.team_a_name}
-                  teamBName={match.team_b_name}
-                />
-              </div>
-            )}
-
           {/* Start Second Innings Section */}
           {!hasInnings &&
             completedInnings.length === 1 &&
-            match.status === "Live" && (
+            match.status === "Innings Break" && (
               <div
                 className="rounded-lg p-6"
                 style={{

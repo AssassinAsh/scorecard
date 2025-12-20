@@ -39,7 +39,7 @@ export default function StartSecondInningsButton({
     <button
       onClick={handleStartSecondInnings}
       disabled={isStarting}
-      className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+      className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {isStarting
         ? "Starting Second Innings..."

@@ -1,6 +1,11 @@
 // Database Types matching Supabase schema
 
-export type MatchStatus = "Upcoming" | "Live" | "Completed";
+export type MatchStatus =
+  | "Upcoming"
+  | "Starting Soon"
+  | "Live"
+  | "Innings Break"
+  | "Completed";
 export type Team = "A" | "B";
 export type TeamSide = "A" | "B";
 export type TossDecision = "Bat" | "Bowl";

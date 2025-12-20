@@ -9,6 +9,7 @@ import type {
   CreatePlayerForm,
   TeamSide,
   Player,
+  MatchStatus,
 } from "@/types";
 
 export async function createMatch(formData: CreateMatchForm) {
@@ -91,11 +92,23 @@ export async function updateToss(matchId: string, tossData: TossDetailsForm) {
     return { error: "Unauthorized" };
   }
 
+  const { data: match } = await supabase
+    .from("matches")
+    .select("status, tournament_id")
+    .eq("id", matchId)
+    .single();
+
+  const newStatus: MatchStatus =
+    match && match.status === "Upcoming"
+      ? "Starting Soon"
+      : match?.status || "Upcoming";
+
   const { error } = await supabase
     .from("matches")
     .update({
       toss_winner: tossData.toss_winner,
       toss_decision: tossData.toss_decision,
+      status: newStatus,
     })
     .eq("id", matchId);
 
@@ -104,6 +117,11 @@ export async function updateToss(matchId: string, tossData: TossDetailsForm) {
   }
 
   revalidatePath(`/dashboard/match/${matchId}`);
+  revalidatePath(`/match/${matchId}`);
+  if (match?.tournament_id) {
+    revalidatePath(`/dashboard/tournament/${match.tournament_id}`);
+  }
+  revalidatePath(`/dashboard/match/${matchId}/score`);
   return { success: true };
 }
 
@@ -133,10 +151,7 @@ export async function updateMatchWinner(matchId: string, winner: TeamSide) {
   return { success: true };
 }
 
-export async function updateMatchStatus(
-  matchId: string,
-  status: "Upcoming" | "Live" | "Completed"
-) {
+export async function updateMatchStatus(matchId: string, status: MatchStatus) {
   const supabase = await createClient();
 
   const {

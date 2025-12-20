@@ -102,6 +102,9 @@ export async function startSecondInnings(matchId: string) {
     return { error: error.message };
   }
 
+  // Mark match as live again for the chase
+  await supabase.from("matches").update({ status: "Live" }).eq("id", matchId);
+
   revalidatePath(`/dashboard/match/${matchId}`);
   revalidatePath(`/dashboard/match/${matchId}/score`);
   return { data };
@@ -220,8 +223,19 @@ export async function recordBall(ballData: CreateBallForm) {
   if (allInnings && allInnings.length > 0) {
     const firstInnings = allInnings[0];
 
-    // If current innings is NOT the first, we're in a chase scenario
-    if (firstInnings.id !== innings.id) {
+    // If current innings IS the first, handle innings break when completed
+    if (firstInnings.id === innings.id) {
+      if (inningsCompleted) {
+        await supabase
+          .from("matches")
+          .update({ status: "Innings Break" })
+          .eq("id", innings.match_id);
+
+        revalidatePath(`/match/${innings.match_id}`);
+        revalidatePath(`/dashboard/match/${innings.match_id}`);
+      }
+    } else {
+      // Otherwise we're in a chase scenario (second innings)
       const target = firstInnings.total_runs + 1;
 
       // Chasing team has reached or passed the target
@@ -391,4 +405,181 @@ export async function getRecentBalls(inningsId: string, limit: number = 36) {
     ...ball,
     bowler_id: overs?.bowler_id || null,
   }));
+}
+
+// Delete the most recent ball for an innings and recompute aggregates & match state
+export async function deleteLastBall(inningsId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Fetch all balls for this innings ordered by creation time (latest first)
+  const { data: balls, error: ballsError } = await supabase
+    .from("balls")
+    .select(
+      `
+      id,
+      runs_off_bat,
+      extras_type,
+      extras_runs,
+      wicket_type,
+      overs!inner(
+        innings_id
+      )
+    `
+    )
+    .eq("overs.innings_id", inningsId)
+    .order("created_at", { ascending: false });
+
+  if (ballsError) {
+    return { error: ballsError.message };
+  }
+
+  if (!balls || balls.length === 0) {
+    return { error: "No deliveries to delete" };
+  }
+
+  const [lastBall, ...remainingBallsSnapshot] = balls as any[];
+
+  // Delete the last ball. We select the deleted row so we can
+  // verify that a row was actually removed (RLS can silently
+  // prevent deletion by filtering rows out).
+  const { data: deletedBalls, error: deleteError } = await supabase
+    .from("balls")
+    .delete()
+    .eq("id", lastBall.id)
+    .select("id");
+
+  if (deleteError) {
+    return { error: deleteError.message };
+  }
+
+  if (!deletedBalls || deletedBalls.length === 0) {
+    return {
+      error:
+        "Unable to delete last delivery (no rows affected). Please check Supabase RLS policies for the balls table.",
+    };
+  }
+
+  // Fetch innings with match for recalculation
+  const { data: innings, error: inningsError } = await supabase
+    .from("innings")
+    .select("*, matches(*)")
+    .eq("id", inningsId)
+    .single();
+
+  if (inningsError || !innings) {
+    return { error: inningsError?.message || "Innings not found" };
+  }
+
+  // Recompute aggregates from remaining balls. We can safely use the
+  // in-memory snapshot (remainingBallsSnapshot) because we've verified
+  // that the corresponding row was actually deleted.
+  let newTotalRuns = 0;
+  let newWickets = 0;
+  let newBallsBowled = 0;
+
+  const remainingBalls = remainingBallsSnapshot;
+
+  if (remainingBalls && remainingBalls.length > 0) {
+    for (const ball of remainingBalls) {
+      newTotalRuns += calculateBallRuns(ball.runs_off_bat, ball.extras_runs);
+
+      if (isLegalBall(ball.extras_type)) {
+        newBallsBowled += 1;
+      }
+
+      if (ball.wicket_type && ball.wicket_type !== "None") {
+        newWickets += 1;
+      }
+    }
+  }
+
+  let inningsCompleted = shouldEndInnings(
+    newBallsBowled,
+    newWickets,
+    innings.matches.overs_per_innings
+  );
+
+  // Update innings aggregates
+  const { error: updateInningsError } = await supabase
+    .from("innings")
+    .update({
+      total_runs: newTotalRuns,
+      wickets: newWickets,
+      balls_bowled: newBallsBowled,
+      is_completed: inningsCompleted,
+    })
+    .eq("id", inningsId);
+
+  if (updateInningsError) {
+    return { error: updateInningsError.message };
+  }
+
+  // Re-evaluate match status and winner based on new aggregates
+  const { data: allInnings } = await supabase
+    .from("innings")
+    .select("*")
+    .eq("match_id", innings.match_id)
+    .order("created_at", { ascending: true });
+
+  let newStatus = innings.matches.status as string;
+  let newWinnerTeam = (innings.matches as any).winner_team ?? null;
+
+  if (allInnings && allInnings.length > 0) {
+    const firstInnings = allInnings[0];
+
+    if (firstInnings.id === innings.id) {
+      // First innings
+      if (inningsCompleted) {
+        newStatus = "Innings Break";
+      } else {
+        newStatus = "Live";
+      }
+    } else {
+      // Second innings (chase)
+      const target = firstInnings.total_runs + 1;
+
+      if (inningsCompleted) {
+        if (newTotalRuns >= target) {
+          // Chasing side wins
+          newStatus = "Completed";
+          newWinnerTeam = innings.batting_team;
+        } else if (newTotalRuns === firstInnings.total_runs) {
+          // Tie
+          newStatus = "Completed";
+          newWinnerTeam = null;
+        } else {
+          // Defending side wins
+          newStatus = "Completed";
+          newWinnerTeam = firstInnings.batting_team;
+        }
+      } else {
+        // Chase still in progress
+        newStatus = "Live";
+        newWinnerTeam = null;
+      }
+    }
+
+    // Persist match state
+    const { error: matchUpdateError } = await supabase
+      .from("matches")
+      .update({ status: newStatus, winner_team: newWinnerTeam })
+      .eq("id", innings.match_id);
+
+    if (matchUpdateError) {
+      return { error: matchUpdateError.message };
+    }
+  }
+
+  revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+  revalidatePath(`/dashboard/match/${innings.match_id}`);
+  revalidatePath(`/match/${innings.match_id}`);
+
+  return { success: true };
 }

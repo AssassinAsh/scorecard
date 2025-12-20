@@ -11,7 +11,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ENUM TYPES
 -- =====================
 
-CREATE TYPE match_status AS ENUM ('Upcoming', 'Live', 'Completed');
+CREATE TYPE match_status AS ENUM (
+	'Upcoming',
+	'Starting Soon',
+	'Live',
+	'Innings Break',
+	'Completed'
+);
 CREATE TYPE toss_decision_type AS ENUM ('Bat', 'Bowl');
 CREATE TYPE team_side AS ENUM ('A', 'B');
 CREATE TYPE extras_type AS ENUM ('Wide', 'NoBall', 'Bye', 'LegBye', 'None');
@@ -180,6 +186,11 @@ USING (true);
 CREATE POLICY "Authenticated insert balls"
 ON balls FOR INSERT
 WITH CHECK (auth.role() = 'authenticated');
+
+-- Allow authenticated scorers to delete balls (for undo last delivery)
+CREATE POLICY "Authenticated delete balls"
+ON balls FOR DELETE
+USING (auth.role() = 'authenticated');
 
 -- =====================
 -- TRIGGERS
