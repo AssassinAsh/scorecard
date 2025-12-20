@@ -148,25 +148,38 @@ export default async function MatchPage({
               </div>
             ))}
 
-            {/* Winner Banner */}
-            {match.winner_team && (
+            {/* Result Banner */}
+            {match.status === "Completed" && (
               <div
                 className="rounded-lg p-4 text-center"
                 style={{
-                  background:
-                    "color-mix(in srgb, var(--success) 10%, transparent)",
-                  border: "1px solid var(--success)",
+                  background: match.winner_team
+                    ? "color-mix(in srgb, var(--success) 10%, transparent)"
+                    : "color-mix(in srgb, var(--muted) 10%, transparent)",
+                  border: match.winner_team
+                    ? "1px solid var(--success)"
+                    : "1px solid var(--border)",
                 }}
               >
                 <p
                   className="font-medium text-base sm:text-lg"
-                  style={{ color: "var(--success)" }}
+                  style={{
+                    color: match.winner_team
+                      ? "var(--success)"
+                      : "var(--muted)",
+                  }}
                 >
-                  🏆{" "}
-                  {match.winner_team === "team_a"
-                    ? match.team_a_name
-                    : match.team_b_name}{" "}
-                  won the match
+                  {match.winner_team ? (
+                    <>
+                      🏆{" "}
+                      {match.winner_team === "team_a"
+                        ? match.team_a_name
+                        : match.team_b_name}{" "}
+                      won the match
+                    </>
+                  ) : (
+                    "Match drawn"
+                  )}
                 </p>
               </div>
             )}

@@ -18,92 +18,149 @@ export default async function DashboardTournamentPage({
   const matches = await getMatchesByTournament(id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* Sticky Header */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{
+          background: "var(--card-bg)",
+          borderColor: "var(--border)",
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <Link
             href="/dashboard"
-            className="text-blue-600 hover:text-blue-700 mb-2 inline-block"
+            className="text-sm hover:underline mb-2 inline-block"
+            style={{ color: "var(--accent)" }}
           >
-            ← Back to Dashboard
+            ← Dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {tournament.name}
-          </h1>
-          <p className="text-gray-600">
-            📍 {tournament.location} • 📅{" "}
-            {new Date(tournament.start_date).toLocaleDateString()}
+          <h1 className="text-lg sm:text-xl font-medium">{tournament.name}</h1>
+          <p className="text-sm muted-text">
+            {tournament.location} •{" "}
+            {new Date(tournament.start_date).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
           </p>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Matches</h2>
+      <main className="max-w-4xl mx-auto px-4 py-4">
+        <div className="flex justify-between items-center mb-3 px-2">
+          <h2 className="text-base font-medium">Matches</h2>
           <Link
             href={`/dashboard/match/new?tournament_id=${id}`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
+            style={{ background: "var(--accent)" }}
           >
-            + New Match
+            + New
           </Link>
         </div>
 
         {matches.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-            No matches yet. Create your first match!
+          <div
+            className="cricket-card rounded-lg p-6 text-center"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <p className="muted-text">
+              No matches yet. Create your first match!
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {matches.map((match) => (
-              <Link
+              <div
                 key={match.id}
-                href={`/dashboard/match/${match.id}/setup`}
-                className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+                className="cricket-card rounded-lg p-4"
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--border)",
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                <div className="flex justify-between items-start gap-3 mb-2">
+                  <Link
+                    href={`/dashboard/match/${match.id}/setup`}
+                    className="flex-1 min-w-0"
+                  >
+                    <h3 className="text-base sm:text-lg font-medium team-name truncate">
                       {match.team_a_name} vs {match.team_b_name}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      📅 {new Date(match.match_date).toLocaleDateString()}
+                    <p className="text-sm muted-text mt-1">
+                      {new Date(match.match_date).toLocaleDateString("en-US", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}{" "}
+                      • {match.overs_per_innings} overs
                     </p>
-                    <p className="text-sm text-gray-600">
-                      🏏 {match.overs_per_innings} overs per innings
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2 items-end">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  </Link>
+                  <span
+                    className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap flex-shrink-0"
+                    style={{
+                      background:
                         match.status === "Live"
-                          ? "bg-red-100 text-red-800"
+                          ? "rgba(234, 67, 53, 0.1)"
                           : match.status === "Completed"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+                          ? "rgba(52, 168, 83, 0.1)"
+                          : "rgba(128, 134, 139, 0.1)",
+                      color:
+                        match.status === "Live"
+                          ? "var(--danger)"
+                          : match.status === "Completed"
+                          ? "var(--success)"
+                          : "var(--muted)",
+                    }}
+                  >
+                    {match.status}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  {match.status === "Live" && (
+                    <Link
+                      href={`/dashboard/match/${match.id}/score`}
+                      className="text-sm px-3 py-1.5 rounded-md font-medium text-white"
+                      style={{ background: "var(--danger)" }}
                     >
-                      {match.status}
-                    </span>
-                    {match.status === "Live" && (
-                      <Link
-                        href={`/dashboard/match/${match.id}/score`}
-                        className="text-sm text-blue-600 hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Score →
-                      </Link>
-                    )}
-                  </div>
+                      Score Live
+                    </Link>
+                  )}
+                  <Link
+                    href={`/dashboard/match/${match.id}/setup`}
+                    className="text-sm px-3 py-1.5 rounded-md font-medium"
+                    style={{
+                      background: "var(--background)",
+                      border: "1px solid var(--border)",
+                      color: "var(--foreground)",
+                    }}
+                  >
+                    Setup
+                  </Link>
                 </div>
                 {match.winner_team && (
-                  <p className="mt-2 text-sm font-medium text-green-600">
-                    Winner:{" "}
+                  <p
+                    className="mt-2 text-sm font-medium"
+                    style={{ color: "var(--success)" }}
+                  >
                     {match.winner_team === "team_a"
                       ? match.team_a_name
-                      : match.team_b_name}
+                      : match.team_b_name}{" "}
+                    won
                   </p>
                 )}
-              </Link>
+                {!match.winner_team && match.status === "Completed" && (
+                  <p
+                    className="mt-2 text-sm font-medium"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Match drawn
+                  </p>
+                )}
+              </div>
             ))}
           </div>
         )}

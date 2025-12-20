@@ -96,6 +96,14 @@ export default async function TournamentPage({
                         won
                       </p>
                     )}
+                    {!match.winner_team && match.status === "Completed" && (
+                      <p
+                        className="text-sm mt-2 font-medium"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        Match drawn
+                      </p>
+                    )}
                   </div>
                   <span
                     className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap flex-shrink-0"

@@ -45,26 +45,40 @@ function NewMatchForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      <header
+        className="shadow-sm border-b"
+        style={{
+          background: "var(--card-bg)",
+          borderColor: "var(--border)",
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <Link
             href={`/dashboard/tournament/${tournamentId}`}
-            className="text-blue-600 hover:text-blue-700 mb-2 inline-block"
+            className="mb-2 inline-block text-sm hover:underline"
+            style={{ color: "var(--accent)" }}
           >
-            ← Back to Tournament
+             Back to Tournament
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Match</h1>
+          <h1 className="text-lg sm:text-xl font-medium">Create New Match</h1>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow p-6">
+      <main className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+        <div
+          className="rounded-lg p-6"
+          style={{
+            background: "var(--card-bg)",
+            border: "1px solid var(--border)",
+          }}
+        >
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
                 htmlFor="team_a_name"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
               >
                 Team A Name *
               </label>
@@ -73,7 +87,12 @@ function NewMatchForm() {
                 name="team_a_name"
                 type="text"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
                 placeholder="Mumbai Indians"
               />
             </div>
@@ -81,7 +100,8 @@ function NewMatchForm() {
             <div>
               <label
                 htmlFor="team_b_name"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
               >
                 Team B Name *
               </label>
@@ -90,7 +110,12 @@ function NewMatchForm() {
                 name="team_b_name"
                 type="text"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
                 placeholder="Chennai Super Kings"
               />
             </div>
@@ -98,7 +123,8 @@ function NewMatchForm() {
             <div>
               <label
                 htmlFor="match_date"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
               >
                 Match Date *
               </label>
@@ -107,33 +133,51 @@ function NewMatchForm() {
                 name="match_date"
                 type="date"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
               />
             </div>
 
             <div>
               <label
                 htmlFor="overs_per_innings"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
               >
-                Overs Per Innings *
+                Overs Per Innings * (1-10)
               </label>
-              <select
+              <input
                 id="overs_per_innings"
                 name="overs_per_innings"
+                type="number"
+                min="1"
+                max="10"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue="20"
-              >
-                <option value="5">5 overs (Practice)</option>
-                <option value="10">10 overs</option>
-                <option value="20">20 overs (T20)</option>
-                <option value="50">50 overs (ODI)</option>
-              </select>
+                defaultValue="5"
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+                placeholder="5"
+              />
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-700 text-sm">
+              <div
+                className="rounded-md p-3 text-sm"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--danger) 10%, transparent)",
+                  border: "1px solid var(--danger)",
+                  color: "var(--danger)",
+                }}
+              >
                 {error}
               </div>
             )}
@@ -141,7 +185,8 @@ function NewMatchForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+              className="w-full py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-white"
+              style={{ background: "var(--accent)" }}
             >
               {loading ? "Creating..." : "Create Match"}
             </button>
@@ -156,7 +201,13 @@ export default function NewMatchPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{
+            background: "var(--background)",
+            color: "var(--foreground)",
+          }}
+        >
           Loading...
         </div>
       }

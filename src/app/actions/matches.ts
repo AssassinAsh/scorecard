@@ -8,6 +8,7 @@ import type {
   TossDetailsForm,
   CreatePlayerForm,
   TeamSide,
+  Player,
 } from "@/types";
 
 export async function createMatch(formData: CreateMatchForm) {
@@ -132,6 +133,32 @@ export async function updateMatchWinner(matchId: string, winner: TeamSide) {
   return { success: true };
 }
 
+export async function updateMatchStatus(
+  matchId: string,
+  status: "Upcoming" | "Live" | "Completed"
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  const { error } = await supabase
+    .from("matches")
+    .update({ status })
+    .eq("id", matchId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/match/${matchId}`);
+  return { success: true };
+}
+
 export async function addPlayers(players: CreatePlayerForm[]) {
   const supabase = await createClient();
 
@@ -153,6 +180,56 @@ export async function addPlayers(players: CreatePlayerForm[]) {
   }
 
   return { success: true };
+}
+
+export async function createPlayer(
+  matchId: string,
+  player: Omit<CreatePlayerForm, "match_id">
+): Promise<{ data: Player | null; error?: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: "Unauthorized" };
+  }
+  // Enforce unique player names per team within a match
+  const { data: existing, error: existingError } = await supabase
+    .from("players")
+    .select("id")
+    .eq("match_id", matchId)
+    .eq("team", player.team)
+    .eq("name", player.name.trim());
+
+  if (existingError) {
+    console.error("Error checking existing players:", existingError);
+    return { data: null, error: "Unable to validate player name" };
+  }
+
+  if (existing && existing.length > 0) {
+    return {
+      data: null,
+      error: "This team already has a player with that name.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .insert({
+      ...player,
+      match_id: matchId,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating player:", error);
+    return { data: null, error: error.message };
+  }
+
+  revalidatePath(`/dashboard/match/${matchId}/score`);
+  return { data };
 }
 
 export async function getPlayersByMatch(matchId: string) {

@@ -81,6 +81,7 @@ export interface Ball {
   extras_runs: number;
   wicket_type: WicketType;
   dismissed_player_id: string | null;
+  bowler_id?: string | null; // Optional, populated from joined overs table
   created_at: string;
 }
 

@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
-import { getCurrentInnings, getAllInnings } from "@/app/actions/scoring";
+import {
+  getCurrentInnings,
+  getAllInnings,
+  getRecentBalls,
+} from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
 import {
   formatScore,
   formatOvers,
   calculateOvers,
 } from "@/lib/cricket/scoring";
+import ScoringInterface from "@/components/ScoringInterface";
 
 export default async function ScoringPage({
   params,
@@ -23,51 +28,79 @@ export default async function ScoringPage({
   const players = await getPlayersByMatch(id);
   const currentInnings = await getCurrentInnings(id);
   const allInnings = await getAllInnings(id);
+  const recentBalls = currentInnings
+    ? await getRecentBalls(currentInnings.id)
+    : [];
+
+  const completedInnings = allInnings.filter((i) => i.is_completed);
+  const firstCompletedInnings = completedInnings[0];
+
+  // Second innings chase information
+  const isSecondInnings =
+    currentInnings &&
+    firstCompletedInnings &&
+    currentInnings.id !== firstCompletedInnings.id;
+
+  const targetRuns = isSecondInnings
+    ? firstCompletedInnings.total_runs + 1
+    : null;
+
+  const ballsRemaining = isSecondInnings
+    ? match.overs_per_innings * 6 - currentInnings!.balls_bowled
+    : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* Sticky Header */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{
+          background: "var(--card-bg)",
+          borderColor: "var(--border)",
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <Link
             href={`/dashboard/match/${id}/setup`}
-            className="text-blue-600 hover:text-blue-700 mb-2 inline-block"
+            className="text-sm hover:underline mb-2 inline-block"
+            style={{ color: "var(--accent)" }}
           >
-            ← Back to Setup
+            ← Setup
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {match.team_a_name} vs {match.team_b_name}
-          </h1>
-          <span className="inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-            LIVE SCORING
-          </span>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg sm:text-xl font-medium">
+              {match.team_a_name} vs {match.team_b_name}
+            </h1>
+            <span
+              className="px-2 py-1 rounded text-xs font-medium"
+              style={{
+                background:
+                  match.status === "Completed"
+                    ? "rgba(15, 157, 88, 0.1)"
+                    : "rgba(234, 67, 53, 0.1)",
+                color:
+                  match.status === "Completed" ? "#0F9D58" : "var(--danger)",
+              }}
+            >
+              {match.status.toUpperCase()}
+            </span>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Current Score Display */}
-        {currentInnings && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-2">
-              {currentInnings.batting_team === "A"
-                ? match.team_a_name
-                : match.team_b_name}{" "}
-              Batting
-            </h2>
-            <div className="flex items-baseline gap-4">
-              <p className="text-5xl font-bold text-blue-600">
-                {formatScore(currentInnings.total_runs, currentInnings.wickets)}
-              </p>
-              <p className="text-xl text-gray-600">
-                ({formatOvers(calculateOvers(currentInnings.balls_bowled))} ov)
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Previous Innings */}
+      <main className="max-w-4xl mx-auto px-4 py-4">
+        {/* Previous Innings Summary */}
         {allInnings.filter((i) => i.is_completed).length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Previous Innings</h2>
+          <div
+            className="rounded-lg p-4 mb-4"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h2 className="text-sm font-medium mb-3 muted-text">
+              Previous Innings
+            </h2>
             <div className="space-y-2">
               {allInnings
                 .filter((i) => i.is_completed)
@@ -76,12 +109,12 @@ export default async function ScoringPage({
                     key={inning.id}
                     className="flex justify-between items-center"
                   >
-                    <span className="font-medium">
+                    <span className="text-sm font-medium">
                       {inning.batting_team === "A"
                         ? match.team_a_name
                         : match.team_b_name}
                     </span>
-                    <span className="text-lg">
+                    <span className="text-base">
                       {formatScore(inning.total_runs, inning.wickets)} (
                       {formatOvers(calculateOvers(inning.balls_bowled))} ov)
                     </span>
@@ -92,84 +125,54 @@ export default async function ScoringPage({
         )}
 
         {/* Scoring Interface */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8">
-          <h2 className="text-xl font-semibold mb-4 text-yellow-900">
-            🚧 Scoring Interface - TODO
-          </h2>
-          <div className="space-y-4 text-yellow-800">
-            <p>
-              <strong>
-                The full ball-by-ball scoring UI needs to be implemented.
-              </strong>{" "}
-              This is the most complex part of the application.
+        {currentInnings ? (
+          <ScoringInterface
+            matchId={id}
+            inningsId={currentInnings.id}
+            battingTeam={currentInnings.batting_team}
+            bowlingTeam={currentInnings.bowling_team}
+            teamAName={match.team_a_name}
+            teamBName={match.team_b_name}
+            currentScore={currentInnings.total_runs}
+            currentWickets={currentInnings.wickets}
+            ballsBowled={currentInnings.balls_bowled}
+            maxOvers={match.overs_per_innings}
+            existingPlayers={players}
+            recentBalls={recentBalls}
+            tossWinner={match.toss_winner}
+            tossDecision={match.toss_decision}
+            isSecondInnings={Boolean(isSecondInnings)}
+            targetRuns={targetRuns}
+            ballsRemaining={ballsRemaining}
+          />
+        ) : (
+          <div
+            className="rounded-lg p-6 text-center"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <p className="muted-text mb-4">
+              No active innings. Start the match from the setup page.
             </p>
-
-            <div className="bg-white rounded-lg p-4 text-gray-800">
-              <h3 className="font-semibold mb-2">Required Components:</h3>
-              <ul className="list-disc ml-5 space-y-1 text-sm">
-                <li>Striker/Non-striker selection dropdowns</li>
-                <li>Bowler selection dropdown</li>
-                <li>Button grid for runs: 0, 1, 2, 3, 4, 5, 6</li>
-                <li>
-                  Extras buttons: Wide, No Ball, Bye, Leg Bye (with run counts)
-                </li>
-                <li>
-                  Wicket button → opens modal with wicket type and dismissed
-                  player
-                </li>
-                <li>Current over display (showing last 6 balls)</li>
-                <li>Auto strike rotation logic</li>
-                <li>New over prompt (select new bowler)</li>
-                <li>Innings end detection and prompt for next innings</li>
-                <li>End match button (select winner)</li>
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-lg p-4 text-gray-800">
-              <h3 className="font-semibold mb-2">Server Actions to Use:</h3>
-              <ul className="list-disc ml-5 space-y-1 text-sm">
-                <li>
-                  <code>startInnings(matchId, battingTeam, bowlingTeam)</code>
-                </li>
-                <li>
-                  <code>startNewOver(inningsId, overNumber, bowlerName)</code>
-                </li>
-                <li>
-                  <code>recordBall(ballData)</code> - returns rotateStrike,
-                  shouldEndInnings, isLegalBall
-                </li>
-                <li>
-                  <code>updateMatchWinner(matchId, winner)</code>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-lg p-4 text-gray-800">
-              <h3 className="font-semibold mb-2">State Management Needed:</h3>
-              <ul className="list-disc ml-5 space-y-1 text-sm">
-                <li>Current striker (player name)</li>
-                <li>Current non-striker (player name)</li>
-                <li>Current bowler (player name)</li>
-                <li>Current over ID</li>
-                <li>Legal ball count in current over (1-6)</li>
-                <li>Recent balls array for display</li>
-              </ul>
-            </div>
-
-            <p className="text-sm">
-              <strong>Quick Implementation Path:</strong> Start with a simple
-              form that takes all ball details at once, then gradually add
-              button-based UI with proper state management.
-            </p>
+            <Link
+              href={`/dashboard/match/${id}/setup`}
+              className="inline-block px-4 py-2 rounded-md text-sm font-medium text-white"
+              style={{ background: "var(--accent)" }}
+            >
+              Go to Setup
+            </Link>
           </div>
-        </div>
+        )}
 
         {/* View Public Scorecard */}
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <Link
             href={`/match/${id}`}
             target="_blank"
-            className="text-blue-600 hover:underline"
+            className="text-sm hover:underline"
+            style={{ color: "var(--accent)" }}
           >
             View Public Scorecard →
           </Link>

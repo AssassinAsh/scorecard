@@ -47,6 +47,66 @@ export async function startInnings(
   return { data };
 }
 
+// Convenience helper to start a second innings for a match.
+// Batting/bowling sides are derived from the first completed innings.
+export async function startSecondInnings(matchId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Get all innings for this match ordered by creation
+  const { data: inningsList, error: inningsError } = await supabase
+    .from("innings")
+    .select("*")
+    .eq("match_id", matchId)
+    .order("created_at", { ascending: true });
+
+  if (inningsError) {
+    return { error: inningsError.message };
+  }
+
+  if (!inningsList || inningsList.length === 0) {
+    return { error: "No first innings found for this match" };
+  }
+
+  const firstInnings = inningsList[0];
+
+  if (!firstInnings.is_completed) {
+    return { error: "First innings is not yet completed" };
+  }
+
+  // Second innings: swap batting and bowling teams
+  const battingTeam: Team = firstInnings.bowling_team;
+  const bowlingTeam: Team = firstInnings.batting_team;
+
+  const { data, error } = await supabase
+    .from("innings")
+    .insert({
+      match_id: matchId,
+      batting_team: battingTeam,
+      bowling_team: bowlingTeam,
+      total_runs: 0,
+      wickets: 0,
+      balls_bowled: 0,
+      is_completed: false,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/dashboard/match/${matchId}`);
+  revalidatePath(`/dashboard/match/${matchId}/score`);
+  return { data };
+}
+
 export async function startNewOver(
   inningsId: string,
   overNumber: number,
@@ -121,7 +181,7 @@ export async function recordBall(ballData: CreateBallForm) {
     return { error: "Innings not found" };
   }
 
-  // Calculate updates
+  // Calculate updates for this ball
   const totalRuns = calculateBallRuns(
     ballData.runs_off_bat,
     ballData.extras_runs
@@ -129,25 +189,82 @@ export async function recordBall(ballData: CreateBallForm) {
   const isLegal = isLegalBall(ballData.extras_type);
   const hasWicket = ballData.wicket_type !== "None" ? 1 : 0;
 
-  // Count legal balls in this innings
+  // Recalculate total legal balls for the entire innings from the balls table.
+  // This guarantees that wides/no-balls are never counted as legal deliveries
+  // even if there was any earlier aggregation bug.
   const { count: legalBallCount } = await supabase
     .from("balls")
-    .select("*", { count: "exact", head: true })
-    .eq("over_id", ballData.over_id)
+    .select("id, overs!inner(innings_id)", { count: "exact", head: true })
+    .eq("overs.innings_id", over.innings_id)
     .in("extras_type", ["None", "Bye", "LegBye"]);
 
-  const totalLegalBalls = (legalBallCount || 0) + (isLegal ? 1 : 0);
+  const newBallsBowled = legalBallCount || 0;
 
   // Update innings aggregates
   const newTotalRuns = innings.total_runs + totalRuns;
   const newWickets = innings.wickets + hasWicket;
-  const newBallsBowled = innings.balls_bowled + (isLegal ? 1 : 0);
-
-  const shouldEnd = shouldEndInnings(
+  let inningsCompleted = shouldEndInnings(
     newBallsBowled,
     newWickets,
     innings.matches.overs_per_innings
   );
+
+  // Determine match result in case of second innings
+  // Fetch all innings for this match to find the first innings target.
+  const { data: allInnings } = await supabase
+    .from("innings")
+    .select("*")
+    .eq("match_id", innings.match_id)
+    .order("created_at", { ascending: true });
+
+  if (allInnings && allInnings.length > 0) {
+    const firstInnings = allInnings[0];
+
+    // If current innings is NOT the first, we're in a chase scenario
+    if (firstInnings.id !== innings.id) {
+      const target = firstInnings.total_runs + 1;
+
+      // Chasing team has reached or passed the target
+      if (newTotalRuns >= target) {
+        inningsCompleted = true;
+
+        // Mark match as completed with winner = current batting team
+        await supabase
+          .from("matches")
+          .update({ status: "Completed", winner_team: innings.batting_team })
+          .eq("id", innings.match_id);
+
+        revalidatePath(`/match/${innings.match_id}`);
+      } else if (
+        // Innings naturally completed (all balls / all out) and scores level
+        inningsCompleted &&
+        newTotalRuns === firstInnings.total_runs
+      ) {
+        // Draw (tie): mark match as completed with no winner
+        await supabase
+          .from("matches")
+          .update({ status: "Completed", winner_team: null })
+          .eq("id", innings.match_id);
+
+        revalidatePath(`/match/${innings.match_id}`);
+      } else if (
+        // Innings completed and chasing side fell short of the target
+        inningsCompleted &&
+        newTotalRuns < firstInnings.total_runs
+      ) {
+        // Defending side wins: first-innings batting team is the winner
+        await supabase
+          .from("matches")
+          .update({
+            status: "Completed",
+            winner_team: firstInnings.batting_team,
+          })
+          .eq("id", innings.match_id);
+
+        revalidatePath(`/match/${innings.match_id}`);
+      }
+    }
+  }
 
   const { error: updateError } = await supabase
     .from("innings")
@@ -155,7 +272,7 @@ export async function recordBall(ballData: CreateBallForm) {
       total_runs: newTotalRuns,
       wickets: newWickets,
       balls_bowled: newBallsBowled,
-      is_completed: shouldEnd,
+      is_completed: inningsCompleted,
     })
     .eq("id", over.innings_id);
 
@@ -175,7 +292,7 @@ export async function recordBall(ballData: CreateBallForm) {
   return {
     data: ball,
     rotateStrike,
-    shouldEndInnings: shouldEnd,
+    shouldEndInnings: inningsCompleted,
     isLegalBall: isLegal,
   };
 }
@@ -214,15 +331,14 @@ export async function getCurrentInnings(matchId: string) {
     .eq("match_id", matchId)
     .eq("is_completed", false)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .limit(1);
 
   if (error) {
     console.error("Error fetching current innings:", error);
     return null;
   }
 
-  return data;
+  return data && data.length > 0 ? data[0] : null;
 }
 
 export async function getAllInnings(matchId: string) {
@@ -240,4 +356,39 @@ export async function getAllInnings(matchId: string) {
   }
 
   return data;
+}
+
+// Fetch recent balls for an innings.
+// "limit" is intentionally generous so that a full over (including wides/no-balls)
+// is always contained within the result set. This ensures the UI can correctly
+// compute legal deliveries and display the whole over.
+export async function getRecentBalls(inningsId: string, limit: number = 36) {
+  const supabase = await createClient();
+
+  // Join through overs table since balls table doesn't have innings_id
+  const { data, error } = await supabase
+    .from("balls")
+    .select(
+      `
+      *,
+      overs!inner(
+        innings_id,
+        bowler_id
+      )
+    `
+    )
+    .eq("overs.innings_id", inningsId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching recent balls:", error);
+    return [];
+  }
+
+  // Extract bowler_id from nested overs and add it to ball
+  return data.map(({ overs, ...ball }) => ({
+    ...ball,
+    bowler_id: overs?.bowler_id || null,
+  }));
 }
