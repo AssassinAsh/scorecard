@@ -18,72 +18,105 @@ export default async function TournamentPage({
   const matches = await getMatchesByTournament(id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* Sticky Header */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{
+          background: "var(--card-bg)",
+          borderColor: "var(--border)",
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <Link
             href="/"
-            className="text-blue-600 hover:text-blue-700 mb-2 inline-block"
+            className="text-sm hover:underline mb-2 inline-block"
+            style={{ color: "var(--accent)" }}
           >
-            ← Back to Tournaments
+            ← All Tournaments
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {tournament.name}
-          </h1>
-          <p className="text-gray-600">
-            📍 {tournament.location} • 📅{" "}
-            {new Date(tournament.start_date).toLocaleDateString()}
+          <h1 className="text-lg sm:text-xl font-medium">{tournament.name}</h1>
+          <p className="text-sm mt-1 muted-text">
+            {tournament.location} •{" "}
+            {new Date(tournament.start_date).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
           </p>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <h2 className="text-xl font-semibold mb-4">Matches</h2>
+      <main className="max-w-4xl mx-auto px-4 py-4">
+        <h2 className="text-base font-medium mb-3 px-2">Matches</h2>
 
         {matches.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-            No matches scheduled yet
+          <div
+            className="cricket-card rounded-lg p-6 text-center"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <p className="muted-text">No matches scheduled yet</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {matches.map((match) => (
               <Link
                 key={match.id}
                 href={`/match/${match.id}`}
-                className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+                className="cricket-card block rounded-lg p-4"
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--border)",
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-medium team-name truncate">
                       {match.team_a_name} vs {match.team_b_name}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      📅 {new Date(match.match_date).toLocaleDateString()}
+                    <p className="text-sm muted-text mt-1">
+                      {new Date(match.match_date).toLocaleDateString("en-US", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}{" "}
+                      • {match.overs_per_innings} overs
                     </p>
-                    <p className="text-sm text-gray-600">
-                      🏏 {match.overs_per_innings} overs per innings
-                    </p>
+                    {match.winner_team && (
+                      <p
+                        className="text-sm mt-2 font-medium"
+                        style={{ color: "var(--success)" }}
+                      >
+                        {match.winner_team === "team_a"
+                          ? match.team_a_name
+                          : match.team_b_name}{" "}
+                        won
+                      </p>
+                    )}
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      match.status === "Live"
-                        ? "bg-red-100 text-red-800"
-                        : match.status === "Completed"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
+                    className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap flex-shrink-0"
+                    style={{
+                      background:
+                        match.status === "Live"
+                          ? "rgba(234, 67, 53, 0.1)"
+                          : match.status === "Completed"
+                          ? "rgba(52, 168, 83, 0.1)"
+                          : "rgba(128, 134, 139, 0.1)",
+                      color:
+                        match.status === "Live"
+                          ? "var(--danger)"
+                          : match.status === "Completed"
+                          ? "var(--success)"
+                          : "var(--muted)",
+                    }}
                   >
                     {match.status}
                   </span>
                 </div>
-                {match.winner_team && (
-                  <p className="mt-2 text-sm font-medium text-green-600">
-                    Winner:{" "}
-                    {match.winner_team === "team_a"
-                      ? match.team_a_name
-                      : match.team_b_name}
-                  </p>
-                )}
               </Link>
             ))}
           </div>

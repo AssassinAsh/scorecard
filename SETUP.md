@@ -90,9 +90,9 @@ The file `/app/dashboard/match/[id]/score/page.tsx` currently shows a placeholde
 #### Required State Management
 
 ```typescript
-const [striker, setStriker] = useState<string>("");
-const [nonStriker, setNonStriker] = useState<string>("");
-const [bowler, setBowler] = useState<string>("");
+const [strikerId, setStrikerId] = useState<string>("");
+const [nonStrikerId, setNonStrikerId] = useState<string>("");
+const [bowlerId, setBowlerId] = useState<string | null>(null);
 const [currentOver, setCurrentOver] = useState<Over | null>(null);
 const [legalBallsInOver, setLegalBallsInOver] = useState(0);
 ```
@@ -139,21 +139,20 @@ Already created in `/app/actions/scoring.ts`:
 // Start first innings
 await startInnings(matchId, "A", "B");
 
-// Start a new over
-await startNewOver(inningsId, overNumber, bowlerName);
+// Start a new over (bowlerId can be null)
+await startNewOver(inningsId, overNumber, bowlerId);
 
-// Record each ball
+// Record each ball (using player IDs, not names)
 const result = await recordBall({
   over_id: currentOver.id,
   ball_number: legalBallsInOver + 1,
-  striker,
-  non_striker,
-  bowler,
+  striker_id: strikerId,
+  non_striker_id: nonStrikerId,
   runs_off_bat: 4,
   extras_type: "None",
   extras_runs: 0,
   wicket_type: "None",
-  dismissed_player: null,
+  dismissed_player_id: null,
 });
 
 // result contains:
@@ -161,8 +160,8 @@ const result = await recordBall({
 // - shouldEndInnings: boolean (10 wickets or max overs)
 // - isLegalBall: boolean (increment ball count)
 
-// End match
-await updateMatchWinner(matchId, "team_a");
+// End match (use 'A' or 'B' for winner)
+await updateMatchWinner(matchId, "A");
 ```
 
 #### Cricket Logic Helpers

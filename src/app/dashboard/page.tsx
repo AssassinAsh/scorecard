@@ -1,23 +1,36 @@
-import Link from 'next/link'
-import { logout, getUser } from '../actions/auth'
-import { getTournaments } from '../actions/tournaments'
+import Link from "next/link";
+import { logout, getUser } from "../actions/auth";
+import { getTournaments } from "../actions/tournaments";
 
 export default async function DashboardPage() {
-  const user = await getUser()
-  const tournaments = await getTournaments()
+  const user = await getUser();
+  const tournaments = await getTournaments();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Scorer Dashboard</h1>
-            <div className="flex gap-4 items-center">
-              <span className="text-sm text-gray-600">{user?.email}</span>
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* Sticky Header */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{
+          background: "var(--card-bg)",
+          borderColor: "var(--border)",
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex justify-between items-center gap-4">
+            <h1 className="text-lg sm:text-xl font-medium">Scorer Dashboard</h1>
+            <div className="flex gap-3 items-center">
+              <span className="text-sm muted-text hidden sm:inline">
+                {user?.email}
+              </span>
               <form action={logout}>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-3 py-1.5 text-sm rounded-md"
+                  style={{
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
                 >
                   Logout
                 </button>
@@ -27,48 +40,78 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Tournaments</h2>
+      <main className="max-w-4xl mx-auto px-4 py-4">
+        <div className="flex justify-between items-center mb-3 px-2">
+          <h2 className="text-base font-medium">Tournaments</h2>
           <Link
             href="/dashboard/tournament/new"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
+            style={{ background: "var(--accent)" }}
           >
-            + New Tournament
+            + New
           </Link>
         </div>
 
         {tournaments.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-            No tournaments yet. Create your first tournament!
+          <div
+            className="cricket-card rounded-lg p-6 text-center"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <p className="muted-text">
+              No tournaments yet. Create your first tournament!
+            </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-3">
             {tournaments.map((tournament) => (
               <Link
                 key={tournament.id}
                 href={`/dashboard/tournament/${tournament.id}`}
-                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+                className="cricket-card block rounded-lg p-4"
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--border)",
+                }}
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-medium team-name mb-1">
                   {tournament.name}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  📍 {tournament.location}
-                </p>
-                <p className="text-sm text-gray-600">
-                  📅 {new Date(tournament.start_date).toLocaleDateString()}
+                <p className="text-sm muted-text">
+                  {tournament.location} •{" "}
+                  {new Date(tournament.start_date).toLocaleDateString("en-US", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </p>
               </Link>
             ))}
           </div>
         )}
 
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-2">Quick Links</h3>
-          <ul className="space-y-2 text-blue-700">
+        <div
+          className="mt-4 rounded-lg p-4"
+          style={{
+            background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+            border: "1px solid var(--accent)",
+          }}
+        >
+          <h3
+            className="font-medium text-sm mb-2"
+            style={{ color: "var(--accent)" }}
+          >
+            Quick Links
+          </h3>
+          <ul className="space-y-1.5">
             <li>
-              <Link href="/" className="hover:underline">
+              <Link
+                href="/"
+                className="text-sm hover:underline"
+                style={{ color: "var(--accent)" }}
+              >
                 → View Public Tournament List
               </Link>
             </li>
@@ -76,5 +119,5 @@ export default async function DashboardPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

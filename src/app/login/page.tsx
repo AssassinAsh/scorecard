@@ -7,62 +7,97 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-6">Scorer Login</h1>
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: "var(--background)" }}
+    >
+      <div className="w-full max-w-md">
+        <div
+          className="rounded-lg p-6 sm:p-8"
+          style={{
+            background: "var(--card-bg)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <h1 className="text-xl sm:text-2xl font-medium text-center mb-6">
+            Scorer Login
+          </h1>
 
-        <form action={login} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="scorer@example.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {params.error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-red-700 text-sm">
-              {params.error}
+          <form action={login} className="space-y-4">
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--foreground)" }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="w-full px-3 py-2 rounded-md text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+                placeholder="scorer@example.com"
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-          >
-            Sign In
-          </button>
-        </form>
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--foreground)" }}
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="w-full px-3 py-2 rounded-md text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+                placeholder="••••••••"
+              />
+            </div>
 
-        <p className="mt-4 text-sm text-gray-600 text-center">
-          Only registered scorers can log in
-        </p>
+            {params.error && (
+              <div
+                className="rounded-md p-3 text-sm"
+                style={{
+                  background: "rgba(234, 67, 53, 0.1)",
+                  border: "1px solid var(--danger)",
+                  color: "var(--danger)",
+                }}
+              >
+                {params.error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-2.5 px-4 rounded-md font-medium text-white text-sm"
+              style={{
+                background: "var(--accent)",
+              }}
+            >
+              Sign In
+            </button>
+          </form>
+
+          <p className="mt-4 text-sm text-center muted-text">
+            Only registered scorers can log in
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,18 +1,22 @@
-import Link from 'next/link'
-import { getTournaments } from './actions/tournaments'
+import Link from "next/link";
+import { getTournaments } from "./actions/tournaments";
 
 export default async function Home() {
-  const tournaments = await getTournaments()
+  const tournaments = await getTournaments();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* Header */}
+      <header className="cricket-card sticky top-0 z-10 border-b">
+        <div className="max-w-4xl mx-auto px-4 py-3 sm:px-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Cricket Scorecard</h1>
+            <h1 className="text-xl sm:text-2xl font-medium team-name">
+              🏏 Cricket Scorecard
+            </h1>
             <Link
               href="/login"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-3 py-1.5 sm:px-4 sm:py-2 text-sm rounded-full font-medium"
+              style={{ background: "var(--accent)", color: "#fff" }}
             >
               Scorer Login
             </Link>
@@ -20,35 +24,49 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <h2 className="text-xl font-semibold mb-4">Tournaments</h2>
-        
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 sm:px-6">
+        <h2 className="text-lg sm:text-xl font-medium mb-3 sm:mb-4 team-name">
+          Tournaments
+        </h2>
+
         {tournaments.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+          <div className="cricket-card p-6 text-center muted-text">
             No tournaments available yet
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-3">
             {tournaments.map((tournament) => (
               <Link
                 key={tournament.id}
                 href={`/tournament/${tournament.id}`}
-                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+                className="cricket-card block p-4 sm:p-5 hover:shadow-lg transition-all"
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-medium team-name mb-2">
                   {tournament.name}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  📍 {tournament.location}
-                </p>
-                <p className="text-sm text-gray-600">
-                  📅 {new Date(tournament.start_date).toLocaleDateString()}
-                </p>
+                <div className="flex flex-wrap gap-3 text-sm muted-text">
+                  <span className="flex items-center gap-1">
+                    <span className="text-base">📍</span>
+                    {tournament.location}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-base">📅</span>
+                    {new Date(tournament.start_date).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }
+                    )}
+                  </span>
+                </div>
               </Link>
             ))}
           </div>
         )}
       </main>
     </div>
-  )
+  );
 }

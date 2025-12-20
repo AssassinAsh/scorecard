@@ -2,7 +2,11 @@ import Link from "next/link";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import { getCurrentInnings, getAllInnings } from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
-import { formatScore, formatOvers } from "@/lib/cricket/scoring";
+import {
+  formatScore,
+  formatOvers,
+  calculateOvers,
+} from "@/lib/cricket/scoring";
 
 export default async function ScoringPage({
   params,
@@ -54,7 +58,7 @@ export default async function ScoringPage({
                 {formatScore(currentInnings.total_runs, currentInnings.wickets)}
               </p>
               <p className="text-xl text-gray-600">
-                ({formatOvers(currentInnings.overs_completed)} ov)
+                ({formatOvers(calculateOvers(currentInnings.balls_bowled))} ov)
               </p>
             </div>
           </div>
@@ -79,7 +83,7 @@ export default async function ScoringPage({
                     </span>
                     <span className="text-lg">
                       {formatScore(inning.total_runs, inning.wickets)} (
-                      {formatOvers(inning.overs_completed)} ov)
+                      {formatOvers(calculateOvers(inning.balls_bowled))} ov)
                     </span>
                   </div>
                 ))}

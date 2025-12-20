@@ -1,11 +1,18 @@
 // Database Types matching Supabase schema
 
-export type MatchStatus = 'Upcoming' | 'Live' | 'Completed';
-export type Team = 'A' | 'B';
-export type TossWinner = 'team_a' | 'team_b';
-export type TossDecision = 'Bat' | 'Bowl';
-export type ExtrasType = 'Wide' | 'NoBall' | 'Bye' | 'LegBye' | 'None';
-export type WicketType = 'Bowled' | 'Caught' | 'RunOut' | 'LBW' | 'HitWicket' | 'None';
+export type MatchStatus = "Upcoming" | "Live" | "Completed";
+export type Team = "A" | "B";
+export type TeamSide = "A" | "B";
+export type TossDecision = "Bat" | "Bowl";
+export type ExtrasType = "Wide" | "NoBall" | "Bye" | "LegBye" | "None";
+export type WicketType =
+  | "Bowled"
+  | "Caught"
+  | "RunOut"
+  | "Stumps"
+  | "HitWicket"
+  | "LBW"
+  | "None";
 
 export interface Tournament {
   id: string;
@@ -14,6 +21,7 @@ export interface Tournament {
   location: string;
   created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Match {
@@ -24,10 +32,11 @@ export interface Match {
   match_date: string;
   overs_per_innings: number;
   status: MatchStatus;
-  toss_winner: TossWinner | null;
+  toss_winner: TeamSide | null;
   toss_decision: TossDecision | null;
-  winner_team: TossWinner | null;
+  winner_team: TeamSide | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Player {
@@ -36,6 +45,8 @@ export interface Player {
   team: Team;
   name: string;
   batting_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Innings {
@@ -45,16 +56,17 @@ export interface Innings {
   bowling_team: Team;
   total_runs: number;
   wickets: number;
-  overs_completed: number;
+  balls_bowled: number;
   is_completed: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Over {
   id: string;
   innings_id: string;
   over_number: number;
-  bowler_name: string;
+  bowler_id: string | null;
   created_at: string;
 }
 
@@ -62,14 +74,13 @@ export interface Ball {
   id: string;
   over_id: string;
   ball_number: number;
-  striker: string;
-  non_striker: string;
-  bowler: string;
+  striker_id: string;
+  non_striker_id: string;
   runs_off_bat: number;
   extras_type: ExtrasType;
   extras_runs: number;
   wicket_type: WicketType;
-  dismissed_player: string | null;
+  dismissed_player_id: string | null;
   created_at: string;
 }
 
@@ -107,21 +118,20 @@ export interface CreatePlayerForm {
 }
 
 export interface TossDetailsForm {
-  toss_winner: TossWinner;
+  toss_winner: TeamSide;
   toss_decision: TossDecision;
 }
 
 export interface CreateBallForm {
   over_id: string;
   ball_number: number;
-  striker: string;
-  non_striker: string;
-  bowler: string;
+  striker_id: string;
+  non_striker_id: string;
   runs_off_bat: number;
   extras_type: ExtrasType;
   extras_runs: number;
   wicket_type: WicketType;
-  dismissed_player: string | null;
+  dismissed_player_id: string | null;
 }
 
 // UI State types
