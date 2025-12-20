@@ -157,7 +157,7 @@ function NewMatchForm() {
                 min="1"
                 max="10"
                 required
-                defaultValue="5"
+                defaultValue="6"
                 className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
                 style={{
                   background: "var(--background)",

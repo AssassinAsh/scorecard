@@ -100,6 +100,8 @@ extras_type extras_type NOT NULL DEFAULT 'None',
 extras_runs INTEGER NOT NULL DEFAULT 0 CHECK (extras_runs BETWEEN 0 AND 6),
 wicket_type wicket_type NOT NULL DEFAULT 'None',
 dismissed_player_id UUID REFERENCES players(id),
+fielder_id UUID REFERENCES players(id),
+keeper_id UUID REFERENCES players(id),
 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

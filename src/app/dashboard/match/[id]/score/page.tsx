@@ -24,6 +24,8 @@ type LiveBattingRow = {
   fours: number;
   sixes: number;
   strikeRate: string;
+  dismissal?: string | null;
+  isOut?: boolean;
 };
 
 type LiveBowlingRow = {
@@ -117,6 +119,9 @@ export default async function ScoringPage({
       return ((runs * 6) / legalBalls).toFixed(2);
     };
 
+    // Track dismissals per batter so we can show "c X b Y" style text
+    const dismissalMap = new Map<string, string>();
+
     if (inningsDetail.overs) {
       for (const over of inningsDetail.overs) {
         const overBalls = over.balls || [];
@@ -186,6 +191,68 @@ export default async function ScoringPage({
             bowlerStats.maidens += 1;
           }
         }
+
+        // Dismissal details (one per dismissed player)
+        for (const ball of overBalls) {
+          if (
+            ball.wicket_type === "None" ||
+            !ball.dismissed_player_id ||
+            dismissalMap.has(ball.dismissed_player_id)
+          ) {
+            continue;
+          }
+
+          const dismissedId: string = ball.dismissed_player_id;
+          const bowler = bowlerId
+            ? bowlingPlayersForInnings.find((p) => p.id === bowlerId)
+            : null;
+          const bowlerName = bowler?.name;
+
+          let text: string | null = null;
+
+          if (ball.wicket_type === "Bowled") {
+            text = bowlerName ? `b ${bowlerName}` : "b";
+          } else if (ball.wicket_type === "LBW") {
+            text = bowlerName ? `lbw b ${bowlerName}` : "lbw";
+          } else if (ball.wicket_type === "HitWicket") {
+            text = bowlerName ? `hit wicket b ${bowlerName}` : "hit wicket";
+          } else if (ball.wicket_type === "Caught") {
+            const fielder =
+              ball.fielder_id &&
+              bowlingPlayersForInnings.find((p) => p.id === ball.fielder_id);
+            if (fielder && bowlerName) {
+              text = `c ${fielder.name} b ${bowlerName}`;
+            } else if (bowlerName) {
+              text = `c b ${bowlerName}`;
+            } else if (fielder) {
+              text = `c ${fielder.name}`;
+            } else {
+              text = "c";
+            }
+          } else if (ball.wicket_type === "Stumps") {
+            const keeper =
+              ball.keeper_id &&
+              bowlingPlayersForInnings.find((p) => p.id === ball.keeper_id);
+            if (keeper && bowlerName) {
+              text = `stumped ${keeper.name} b ${bowlerName}`;
+            } else if (bowlerName) {
+              text = `stumped b ${bowlerName}`;
+            } else if (keeper) {
+              text = `stumped ${keeper.name}`;
+            } else {
+              text = "stumped";
+            }
+          } else if (ball.wicket_type === "RunOut") {
+            const fielder =
+              ball.fielder_id &&
+              bowlingPlayersForInnings.find((p) => p.id === ball.fielder_id);
+            text = fielder ? `run out (${fielder.name})` : "run out";
+          }
+
+          if (text) {
+            dismissalMap.set(dismissedId, text);
+          }
+        }
       }
     }
 
@@ -196,6 +263,7 @@ export default async function ScoringPage({
         const s =
           battingStatsMap.get(player.id) ||
           ({ runs: 0, balls: 0, fours: 0, sixes: 0 } as const);
+        const dismissal = dismissalMap.get(player.id) || null;
         return {
           playerId: player.id,
           name: player.name,
@@ -204,6 +272,8 @@ export default async function ScoringPage({
           fours: s.fours,
           sixes: s.sixes,
           strikeRate: formatStrikeRate(s.runs, s.balls),
+          dismissal,
+          isOut: Boolean(dismissal),
         };
       });
 
@@ -262,6 +332,8 @@ export default async function ScoringPage({
         if (legalBalls === 0) return "-";
         return ((runs * 6) / legalBalls).toFixed(2);
       };
+
+      const firstDismissalMap = new Map<string, string>();
 
       for (const over of firstDetail.overs) {
         const overBalls = over.balls || [];
@@ -330,6 +402,68 @@ export default async function ScoringPage({
             bowlerStats.maidens += 1;
           }
         }
+
+        // Dismissal details for first innings
+        for (const ball of overBalls) {
+          if (
+            ball.wicket_type === "None" ||
+            !ball.dismissed_player_id ||
+            firstDismissalMap.has(ball.dismissed_player_id)
+          ) {
+            continue;
+          }
+
+          const dismissedId: string = ball.dismissed_player_id;
+          const bowler = bowlerId
+            ? bowlingPlayersForFirst.find((p) => p.id === bowlerId)
+            : null;
+          const bowlerName = bowler?.name;
+
+          let text: string | null = null;
+
+          if (ball.wicket_type === "Bowled") {
+            text = bowlerName ? `b ${bowlerName}` : "b";
+          } else if (ball.wicket_type === "LBW") {
+            text = bowlerName ? `lbw b ${bowlerName}` : "lbw";
+          } else if (ball.wicket_type === "HitWicket") {
+            text = bowlerName ? `hit wicket b ${bowlerName}` : "hit wicket";
+          } else if (ball.wicket_type === "Caught") {
+            const fielder =
+              ball.fielder_id &&
+              bowlingPlayersForFirst.find((p) => p.id === ball.fielder_id);
+            if (fielder && bowlerName) {
+              text = `c ${fielder.name} b ${bowlerName}`;
+            } else if (bowlerName) {
+              text = `c b ${bowlerName}`;
+            } else if (fielder) {
+              text = `c ${fielder.name}`;
+            } else {
+              text = "c";
+            }
+          } else if (ball.wicket_type === "Stumps") {
+            const keeper =
+              ball.keeper_id &&
+              bowlingPlayersForFirst.find((p) => p.id === ball.keeper_id);
+            if (keeper && bowlerName) {
+              text = `stumped ${keeper.name} b ${bowlerName}`;
+            } else if (bowlerName) {
+              text = `stumped b ${bowlerName}`;
+            } else if (keeper) {
+              text = `stumped ${keeper.name}`;
+            } else {
+              text = "stumped";
+            }
+          } else if (ball.wicket_type === "RunOut") {
+            const fielder =
+              ball.fielder_id &&
+              bowlingPlayersForFirst.find((p) => p.id === ball.fielder_id);
+            text = fielder ? `run out (${fielder.name})` : "run out";
+          }
+
+          if (text) {
+            firstDismissalMap.set(dismissedId, text);
+          }
+        }
       }
 
       firstInningsBatting = battingPlayersForFirst
@@ -339,6 +473,7 @@ export default async function ScoringPage({
           const s =
             firstBattingStats.get(player.id) ||
             ({ runs: 0, balls: 0, fours: 0, sixes: 0 } as const);
+          const dismissal = firstDismissalMap.get(player.id) || null;
           return {
             playerId: player.id,
             name: player.name,
@@ -347,6 +482,8 @@ export default async function ScoringPage({
             fours: s.fours,
             sixes: s.sixes,
             strikeRate: formatStrikeRateFirst(s.runs, s.balls),
+            dismissal,
+            isOut: Boolean(dismissal),
           };
         });
 

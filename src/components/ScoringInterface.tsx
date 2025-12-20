@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   recordBall,
   startNewOver,
@@ -53,6 +54,8 @@ interface ScoringInterfaceProps {
     fours: number;
     sixes: number;
     strikeRate: string;
+    dismissal?: string | null;
+    isOut?: boolean;
   }[];
   liveBowling: {
     playerId: string;
@@ -71,6 +74,8 @@ interface ScoringInterfaceProps {
     fours: number;
     sixes: number;
     strikeRate: string;
+    dismissal?: string | null;
+    isOut?: boolean;
   }[];
   firstInningsBowling: {
     playerId: string;
@@ -109,6 +114,7 @@ export default function ScoringInterface({
   firstInningsBowling,
   readOnly = false,
 }: ScoringInterfaceProps) {
+  const router = useRouter();
   // Get the latest ball to extract current players
   const latestBall = recentBalls[0];
   const latestOverId = latestBall?.over_id || "";
@@ -316,7 +322,7 @@ export default function ScoringInterface({
       // Only reload for keeper/fielder (during wicket recording)
       // For batsman/bowler, state update is enough
       if (addingPlayerFor === "keeper" || addingPlayerFor === "fielder") {
-        window.location.reload();
+        router.refresh();
       }
 
       // If we just added a new bowler specifically for the next over,
@@ -385,10 +391,8 @@ export default function ScoringInterface({
         alert((result as any)?.error || "Error deleting last delivery");
         return;
       }
-      // Reload to reflect updated aggregates and over view
-      if (typeof window !== "undefined") {
-        window.location.reload();
-      }
+      // Refresh to reflect updated aggregates and over view
+      router.refresh();
     } catch (error) {
       alert("Error deleting last delivery: " + error);
     } finally {
@@ -495,6 +499,12 @@ export default function ScoringInterface({
             ? runOutBatsmanId
             : strikerId
           : null,
+        fielder_id:
+          isWicket && (wicketType === "Caught" || wicketType === "RunOut")
+            ? fielderId || null
+            : null,
+        keeper_id:
+          isWicket && wicketType === "Stumps" ? keeperId || null : null,
       };
 
       const result = await recordBall(ballData);
@@ -544,13 +554,13 @@ export default function ScoringInterface({
           }
         }
 
-        // Only reload if not a wicket (wicket will prompt for new batsman)
+        // Only refresh if not a wicket (wicket will prompt for new batsman)
         if (!isWicket) {
           if (currentAction === "noball" && typeof window !== "undefined") {
             const key = `free_hit_${inningsId}`;
             window.sessionStorage.setItem(key, "1");
           }
-          window.location.reload();
+          router.refresh();
         }
       }
     } catch (error) {
@@ -777,7 +787,7 @@ export default function ScoringInterface({
             </div>
 
             {/* Content */}
-            <div className="p-3 sm:p-4 space-y-4">
+            <div className="p-3 sm:p-4 space-y-4 overflow-x-auto">
               {scorecardBatting.length > 0 ? (
                 <>
                   {/* Batting Table */}
@@ -824,10 +834,17 @@ export default function ScoringInterface({
                               columnGap: "0.5rem",
                             }}
                           >
-                            <span>
-                              {row.name}
-                              {row.playerId === strikerId ? " *" : ""}
-                            </span>
+                            <div className="flex flex-col">
+                              <span>
+                                {row.name}
+                                {row.playerId === strikerId ? " *" : ""}
+                              </span>
+                              {row.isOut && row.dismissal && (
+                                <span className="text-[10px] sm:text-[11px] muted-text">
+                                  {row.dismissal}
+                                </span>
+                              )}
+                            </div>
                             <span className="tabular-nums">{row.runs}</span>
                             <span className="tabular-nums">{row.balls}</span>
                             <span className="tabular-nums">{row.fours}</span>
@@ -1148,7 +1165,7 @@ export default function ScoringInterface({
                 color: "white",
               }}
             >
-              ➕ Add Next Ball
+              {isRecording ? "Saving..." : "➕ Add Next Ball"}
             </button>
 
             {/* Delete Last Delivery Button */}
@@ -1210,7 +1227,7 @@ export default function ScoringInterface({
                   color: "white",
                 }}
               >
-                Runs (0-6)
+                Runs (0-10)
               </button>
               <button
                 onClick={() => {
@@ -1324,7 +1341,7 @@ export default function ScoringInterface({
 
               <div className="grid grid-cols-4 gap-2 mb-4">
                 {currentAction === "runs"
-                  ? [0, 1, 2, 3, 4, 5, 6].map((run) => (
+                  ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((run) => (
                       <button
                         key={run}
                         onClick={() => setSelectedRuns(run)}
@@ -1345,7 +1362,7 @@ export default function ScoringInterface({
                       </button>
                     ))
                   : currentAction === "bye" || currentAction === "legbye"
-                  ? [1, 2, 3, 4, 5].map((run) => (
+                  ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((run) => (
                       <button
                         key={run}
                         onClick={() => setSelectedRuns(run)}
@@ -1365,7 +1382,7 @@ export default function ScoringInterface({
                         {run}
                       </button>
                     ))
-                  : [0, 1, 2, 3, 4, 5, 6, 7, 8].map((run) => (
+                  : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((run) => (
                       <button
                         key={run}
                         onClick={() => setSelectedRuns(run)}
@@ -1394,7 +1411,7 @@ export default function ScoringInterface({
                   className="flex-1 py-2 rounded-md text-sm font-medium text-white"
                   style={{ background: "var(--accent)" }}
                 >
-                  Confirm
+                  {isRecording ? "Saving..." : "Confirm"}
                 </button>
                 <button
                   onClick={() => {
@@ -1580,7 +1597,7 @@ export default function ScoringInterface({
                   Runs Attempted
                 </label>
                 <div className="grid grid-cols-4 gap-2 mb-3">
-                  {[0, 1, 2, 3].map((run) => (
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((run) => (
                     <button
                       key={run}
                       onClick={() => setSelectedRuns(run)}
@@ -1652,7 +1669,7 @@ export default function ScoringInterface({
                 className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
                 style={{ background: "var(--danger)" }}
               >
-                Record Wicket
+                {isRecording ? "Saving..." : "Record Wicket"}
               </button>
               <button
                 onClick={() => {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTournamentById } from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
+import { getAllInnings } from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
 
 export default async function TournamentPage({
@@ -16,6 +17,53 @@ export default async function TournamentPage({
   }
 
   const matches = await getMatchesByTournament(id);
+
+  const matchesWithResult = await Promise.all(
+    matches.map(async (match) => {
+      let winnerText: string | null = null;
+
+      if (match.status === "Completed") {
+        const innings = await getAllInnings(match.id);
+
+        const firstInnings = innings[0];
+        const secondInnings = innings[1];
+
+        if (match.winner_team && firstInnings && secondInnings) {
+          const winnerName =
+            match.winner_team === "A" ? match.team_a_name : match.team_b_name;
+
+          const defendingTeam = firstInnings.batting_team;
+          const chasingTeam = secondInnings.batting_team;
+
+          if (match.winner_team === defendingTeam) {
+            const margin = firstInnings.total_runs - secondInnings.total_runs;
+            if (margin > 0) {
+              winnerText = `${winnerName} won by ${margin} run${
+                margin === 1 ? "" : "s"
+              }`;
+            } else {
+              winnerText = `${winnerName} won`;
+            }
+          } else if (match.winner_team === chasingTeam) {
+            const wicketsRemaining = 10 - secondInnings.wickets;
+            if (wicketsRemaining > 0) {
+              winnerText = `${winnerName} won by ${wicketsRemaining} wicket${
+                wicketsRemaining === 1 ? "" : "s"
+              }`;
+            } else {
+              winnerText = `${winnerName} won`;
+            }
+          } else {
+            winnerText = `${winnerName} won`;
+          }
+        } else if (!match.winner_team) {
+          winnerText = "Match drawn";
+        }
+      }
+
+      return { match, winnerText };
+    })
+  );
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
@@ -62,7 +110,7 @@ export default async function TournamentPage({
           </div>
         ) : (
           <div className="space-y-3">
-            {matches.map((match) => (
+            {matchesWithResult.map(({ match, winnerText }) => (
               <Link
                 key={match.id}
                 href={`/match/${match.id}`}
@@ -85,23 +133,12 @@ export default async function TournamentPage({
                       })}{" "}
                       • {match.overs_per_innings} overs
                     </p>
-                    {match.winner_team && (
+                    {winnerText && (
                       <p
                         className="text-sm mt-2 font-medium"
                         style={{ color: "var(--success)" }}
                       >
-                        {match.winner_team === "team_a"
-                          ? match.team_a_name
-                          : match.team_b_name}{" "}
-                        won
-                      </p>
-                    )}
-                    {!match.winner_team && match.status === "Completed" && (
-                      <p
-                        className="text-sm mt-2 font-medium"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        Match drawn
+                        {winnerText}
                       </p>
                     )}
                   </div>

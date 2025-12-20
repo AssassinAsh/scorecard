@@ -214,24 +214,24 @@ export function validateBallInput(
   dismissedPlayer: string | null
 ): string | null {
   // Runs off bat should be 0-6
-  if (runsOffBat < 0 || runsOffBat > 6) {
-    return "Runs off bat must be between 0 and 6";
+  if (runsOffBat < 0 || runsOffBat > 10) {
+    return "Runs off bat must be between 0 and 10";
   }
 
   // Extras runs validation
-  if (extrasType === "Wide" && (extrasRuns < 0 || extrasRuns > 6)) {
-    return "Wide runs must be between 0 and 6";
+  if (extrasType === "Wide" && (extrasRuns < 0 || extrasRuns > 10)) {
+    return "Wide runs must be between 0 and 10";
   }
 
   if (
     (extrasType === "Bye" || extrasType === "LegBye") &&
-    (extrasRuns < 1 || extrasRuns > 6)
+    (extrasRuns < 0 || extrasRuns > 10)
   ) {
-    return "Bye/Leg Bye runs must be between 1 and 6";
+    return "Bye/Leg Bye runs must be between 0 and 10";
   }
 
-  if (extrasType === "NoBall" && (extrasRuns < 0 || extrasRuns > 6)) {
-    return "No Ball runs must be between 0 and 6";
+  if (extrasType === "NoBall" && (extrasRuns < 0 || extrasRuns > 10)) {
+    return "No Ball runs must be between 0 and 10";
   }
 
   // If wicket, must have dismissed player

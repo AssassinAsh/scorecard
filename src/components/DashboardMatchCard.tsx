@@ -10,9 +10,13 @@ import TossForm from "./TossForm";
 
 interface DashboardMatchCardProps {
   match: Match;
+  winnerText?: string | null;
 }
 
-export default function DashboardMatchCard({ match }: DashboardMatchCardProps) {
+export default function DashboardMatchCard({
+  match,
+  winnerText,
+}: DashboardMatchCardProps) {
   const router = useRouter();
   const [showTossDialog, setShowTossDialog] = useState(false);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
@@ -114,7 +118,8 @@ export default function DashboardMatchCard({ match }: DashboardMatchCardProps) {
         } first.`
       : null;
 
-  const winnerText = match.winner_team
+  // Basic winner text fallback; detailed margin can be passed from parent
+  const fallbackWinnerText = match.winner_team
     ? `${match.winner_team === "A" ? match.team_a_name : match.team_b_name} won`
     : match.status === "Completed"
     ? "Match drawn"
@@ -130,7 +135,7 @@ export default function DashboardMatchCard({ match }: DashboardMatchCardProps) {
     >
       <div className="flex justify-between items-start gap-3 mb-2">
         <Link
-          href={`/dashboard/match/${match.id}/setup`}
+          href={`/dashboard/match/${match.id}/score`}
           className="flex-1 min-w-0"
         >
           <h3 className="text-base sm:text-lg font-medium team-name truncate">
@@ -169,14 +174,14 @@ export default function DashboardMatchCard({ match }: DashboardMatchCardProps) {
         )}
       </div>
 
-      {winnerText && (
+      {(winnerText ?? fallbackWinnerText) && (
         <p
           className="mt-2 text-sm font-medium"
           style={{
             color: match.winner_team ? "var(--success)" : "var(--muted)",
           }}
         >
-          {winnerText}
+          {winnerText ?? fallbackWinnerText}
         </p>
       )}
 

@@ -82,53 +82,7 @@ export default async function MatchSetupPage({
               </div>
             )}
 
-          {/* Players Section */}
-          {players.length > 0 && (
-            <div
-              className="rounded-lg p-4"
-              style={{
-                background: "var(--card-bg)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              <h2 className="text-base font-medium mb-3">Players Added</h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">
-                    {match.team_a_name} ({teamAPlayers.length})
-                  </h3>
-                  {teamAPlayers.length === 0 ? (
-                    <p className="text-sm muted-text">No players yet</p>
-                  ) : (
-                    <ol className="text-sm space-y-1">
-                      {teamAPlayers.map((p) => (
-                        <li key={p.id} style={{ color: "var(--foreground)" }}>
-                          {p.batting_order}. {p.name}
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium mb-2">
-                    {match.team_b_name} ({teamBPlayers.length})
-                  </h3>
-                  {teamBPlayers.length === 0 ? (
-                    <p className="text-sm muted-text">No players yet</p>
-                  ) : (
-                    <ol className="text-sm space-y-1">
-                      {teamBPlayers.map((p) => (
-                        <li key={p.id} style={{ color: "var(--foreground)" }}>
-                          {p.batting_order}. {p.name}
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Players Section intentionally removed to always direct scorers to the live scorecard */}
 
           {/* Active Match (any ongoing innings) */}
           {hasInnings && (
