@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import { getCurrentInnings, getAllInnings } from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
-import StartSecondInningsButton from "@/components/StartSecondInningsButton";
+import InningsButton from "@/components/InningsButton";
 
 export default async function MatchSetupPage({
   params,
@@ -75,8 +75,9 @@ export default async function MatchSetupPage({
                 <p className="text-sm muted-text mb-4">
                   {secondInningsBattingTeamName} will bat next.
                 </p>
-                <StartSecondInningsButton
+                <InningsButton
                   matchId={id}
+                  inningsNumber={2}
                   battingTeamName={secondInningsBattingTeamName}
                 />
               </div>
