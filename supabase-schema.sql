@@ -1,5 +1,23 @@
--- Cricket Scoring Application - Supabase Schema (Corrected & Safe)
--- Run this in your Supabase SQL Editor
+-- =====================================================
+-- Cricket Scoring Application - Complete Database Schema
+-- =====================================================
+-- 
+-- INSTRUCTIONS:
+-- 1. Create a new Supabase project at https://supabase.com
+-- 2. Go to SQL Editor in your Supabase dashboard
+-- 3. Copy and paste this ENTIRE file
+-- 4. Click 'Run' to create all tables, functions, and policies
+--
+-- This creates:
+-- - Core database structure (tournaments, teams, matches, players, etc.)
+-- - Admin role system (user_roles table)
+-- - Tournament access control (tournament_scorers table)
+-- - Row Level Security (RLS) policies
+-- - Helper functions for access checks
+--
+-- After running, create your admin account:
+-- INSERT INTO user_roles (user_id, is_admin) VALUES ('your-user-id', true);
+-- =====================================================
 
 -- =====================
 -- EXTENSIONS
@@ -255,3 +273,84 @@ CREATE TRIGGER trigger_update_match_status
 AFTER INSERT ON innings
 FOR EACH ROW
 EXECUTE FUNCTION update_match_status();
+
+-- =====================================================
+-- ACCESS CONTROL SYSTEM
+-- =====================================================
+
+-- User Roles Table (Admin system)
+CREATE TABLE IF NOT EXISTS user_roles (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_admin BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_user_roles_admin ON user_roles(is_admin) WHERE is_admin = true;
+
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own role"
+  ON user_roles FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+-- Tournament Scorers Table (Access control)
+CREATE TABLE IF NOT EXISTS tournament_scorers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  granted_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(tournament_id, user_id)
+);
+
+CREATE INDEX idx_tournament_scorers_tournament ON tournament_scorers(tournament_id);
+CREATE INDEX idx_tournament_scorers_user ON tournament_scorers(user_id);
+
+ALTER TABLE tournament_scorers ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read tournament_scorers"
+  ON tournament_scorers FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- Helper function: Check if current user is admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM user_roles 
+    WHERE user_id = auth.uid() 
+    AND is_admin = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function: Check if user has scorer access to a tournament
+CREATE OR REPLACE FUNCTION has_scorer_access(tournament_uuid UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM tournament_scorers 
+    WHERE tournament_id = tournament_uuid 
+    AND user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- SETUP INSTRUCTIONS
+-- =====================================================
+-- 
+-- After running this schema, create your admin account:
+-- 
+-- 1. Create a user in Authentication > Users
+-- 2. Run this SQL with your user ID:
+--    INSERT INTO user_roles (user_id, is_admin) 
+--    VALUES ('your-user-id-here', true);
+--
+-- To grant scorer access to tournaments:
+--    INSERT INTO tournament_scorers (tournament_id, user_id) 
+--    VALUES ('tournament-id', 'scorer-user-id');
+-- =====================================================

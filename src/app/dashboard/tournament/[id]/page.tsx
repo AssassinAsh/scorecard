@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTournamentById } from "@/app/actions/tournaments";
+import { getTournamentById, hasAccess } from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { getAllInnings } from "@/app/actions/scoring";
 import DashboardMatchCard from "@/components/DashboardMatchCard";
@@ -16,6 +16,9 @@ export default async function DashboardTournamentPage({
   if (!tournament) {
     notFound();
   }
+
+  // Check if user has scorer access
+  const hasScorerAccess = await hasAccess(id);
 
   const matches = await getMatchesByTournament(id);
 
@@ -111,15 +114,31 @@ export default async function DashboardTournamentPage({
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-4">
+        {!hasScorerAccess && (
+          <div
+            className="rounded-lg p-3 mb-4 text-sm"
+            style={{
+              background: "rgba(251, 188, 5, 0.1)",
+              border: "1px solid var(--warning)",
+              color: "var(--warning)",
+            }}
+          >
+            👁️ Viewing in spectator mode - You don&apos;t have scorer access to
+            this tournament
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-3 px-2">
           <h2 className="text-base font-medium">Matches</h2>
-          <Link
-            href={`/dashboard/match/new?tournament_id=${id}`}
-            className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
-            style={{ background: "var(--accent)" }}
-          >
-            + New
-          </Link>
+          {hasScorerAccess && (
+            <Link
+              href={`/dashboard/match/new?tournament_id=${id}`}
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
+              style={{ background: "var(--accent)" }}
+            >
+              + New
+            </Link>
+          )}
         </div>
 
         {matches.length === 0 ? (

@@ -6,13 +6,15 @@ This guide will walk you through setting up a fully functional cricket scoring a
 
 - ✅ Complete database schema
 - ✅ Authentication system
+- ✅ **Admin role with access control**
+- ✅ Scorer access management
 - ✅ Tournament & match management
 - ✅ **Live ball-by-ball scoring interface**
 - ✅ Public scorecard viewing
 - ✅ Real-time statistics calculation
 - ✅ Responsive mobile design
 
-## 🚀 Quick Start (5 Minutes)
+## 🚀 Quick Start (10 Minutes)
 
 ### 1. Clone & Install
 
@@ -25,16 +27,35 @@ npm install
 ### 2. Setup Supabase
 
 1. **Create a Supabase project** at https://supabase.com (free tier available)
+
 2. **Run the database schema**:
+
    - Open your Supabase project dashboard
    - Go to **SQL Editor**
    - Copy the entire contents of `supabase-schema.sql`
-   - Paste and run it (this creates all tables, types, and policies)
-3. **Create scorer accounts**:
+   - Paste and run it
+   - This creates:
+     - All core tables (tournaments, matches, players, etc.)
+     - Admin role system (user_roles table)
+     - Tournament access control (tournament_scorers table)
+     - Helper functions for access checks
+
+3. **Create admin account**:
+
    - Go to **Authentication → Users**
    - Click "Add user"
-   - Create email/password accounts for scorers
-   - Note: There's no public signup - accounts must be manually created
+   - Create your email/password account
+   - Copy the user ID
+   - In SQL Editor, run:
+     ```sql
+     INSERT INTO user_roles (user_id, is_admin)
+     VALUES ('paste-user-id-here', true);
+     ```
+
+4. **Create additional scorer accounts** (optional):
+   - Go to **Authentication → Users**
+   - Click "Add user" for each scorer
+   - You can grant tournament access via SQL (see ACCESS_SETUP.md)
 
 ### 3. Configure Environment
 
@@ -66,23 +87,66 @@ Open **http://localhost:3000** - you're ready to score! 🎉
 
 ## 📖 Complete User Guide
 
-### For Scorers (Authenticated Users)
+### Access Control Overview
+
+The application has two types of users:
+
+1. **Admin** (Required)
+
+   - Full system access
+   - Only user who can create tournaments
+   - Has automatic scorer access to all tournaments
+   - Grants access to scorers via SQL
+
+2. **Scorers** (Optional)
+   - Can view all tournaments
+   - Get scorer access when granted by admin
+   - Can score matches in assigned tournaments only
+   - Read-only access to other tournaments
+
+See [ACCESS_SETUP.md](ACCESS_SETUP.md) for detailed access management guide.
+
+### For Admin Users
 
 #### Step 1: Login
 
 - Navigate to **http://localhost:3000/login**
-- Use the scorer credentials you created in Supabase
+- Use the admin credentials you created
 
 #### Step 2: Create a Tournament
 
-1. From dashboard, click **"New Tournament"**
+1. From dashboard, click **"+ New"** button (only visible to admin)
 2. Fill in:
    - Tournament name
    - Start date
    - Location
 3. Submit
 
-#### Step 3: Create Teams
+#### Step 3: Grant Scorer Access (Optional)
+
+If you want other users to score in this tournament:
+
+```sql
+-- In Supabase SQL Editor
+INSERT INTO tournament_scorers (tournament_id, user_id)
+VALUES ('tournament-uuid', 'scorer-user-uuid');
+```
+
+### For Scorer Users
+
+#### Step 1: Login
+
+- Navigate to **http://localhost:3000/login**
+- Use your scorer credentials
+
+#### Step 2: View Tournaments
+
+- All tournaments visible in dashboard
+- Click a tournament to view details
+- If you have scorer access: full scoring interface
+- If not: spectator mode (read-only)
+
+#### Step 3: Create Teams (if you have access)
 
 1. Open your tournament
 2. Click **"Add Team"**

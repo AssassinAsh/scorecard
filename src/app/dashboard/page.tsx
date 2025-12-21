@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { logout, getUser } from "../actions/auth";
-import { getTournaments } from "../actions/tournaments";
+import { getTournaments, isAdmin } from "../actions/tournaments";
 
 export default async function DashboardPage() {
   const user = await getUser();
   const tournaments = await getTournaments();
+  const admin = await isAdmin();
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
@@ -43,13 +44,15 @@ export default async function DashboardPage() {
       <main className="max-w-4xl mx-auto px-4 py-4">
         <div className="flex justify-between items-center mb-3 px-2">
           <h2 className="text-base font-medium">Tournaments</h2>
-          <Link
-            href="/dashboard/tournament/new"
-            className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
-            style={{ background: "var(--accent)" }}
-          >
-            + New
-          </Link>
+          {admin && (
+            <Link
+              href="/dashboard/tournament/new"
+              className="px-3 py-1.5 rounded-md text-sm font-medium text-white"
+              style={{ background: "var(--accent)" }}
+            >
+              + New
+            </Link>
+          )}
         </div>
 
         {tournaments.length === 0 ? (

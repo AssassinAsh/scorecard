@@ -63,17 +63,25 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
    npm install
    ```
 
-3. **Set up Supabase**
+3. **Set up Supabase Database**
 
    - Create a new project at [supabase.com](https://supabase.com)
    - Go to SQL Editor in your Supabase dashboard
-   - Copy and run the entire `supabase-schema.sql` file
-   - Create scorer accounts:
-     - Go to Authentication → Users
-     - Click "Add user"
-     - Create email/password accounts for scorers
+   - Copy and paste the entire `supabase-schema.sql` file
+   - Click Run
 
-4. **Configure environment variables**
+4. **Create Admin Account**
+
+   - Go to Authentication → Users in Supabase
+   - Click "Add user" to create your account
+   - Note the user ID, then run in SQL Editor:
+
+   ```sql
+   INSERT INTO user_roles (user_id, is_admin)
+   VALUES ('your-user-id-here', true);
+   ```
+
+5. **Configure environment variables**
 
    Create a `.env.local` file in the root directory:
 
@@ -84,7 +92,7 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
    Get these values from: Project Settings → API in your Supabase dashboard
 
-5. **Run the development server**
+6. **Run the development server**
 
    ```bash
    npm run dev
@@ -94,17 +102,34 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 ## 📖 Usage Guide
 
+### Admin User
+
+The admin account has full system access:
+
+- **Create Tournaments**: Only admins can create new tournaments
+- **Full Access**: Automatic scorer access to all tournaments
+- **Grant Access**: Assign scorers to specific tournaments via SQL:
+  ```sql
+  INSERT INTO tournament_scorers (tournament_id, user_id)
+  VALUES ('tournament-uuid', 'scorer-user-uuid');
+  ```
+
+See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation.
+
 ### For Scorers
 
 1. **Login** at `/login` with your scorer credentials
-2. **Create Tournament** from the dashboard
-3. **Create Match** under a tournament
-4. **Setup Match**:
+2. **View Tournaments**: See all tournaments in the dashboard
+3. **Scorer Access**: Click a tournament you have access to
+   - Can create matches and score if you have access
+   - Read-only "spectator mode" for tournaments without access
+4. **Create Match** under accessible tournaments
+5. **Setup Match**:
    - Add team names
    - Set overs per innings
    - Configure toss details
-5. **Add Players** (11 per team)
-6. **Start Scoring**:
+6. **Add Players** (11 per team)
+7. **Start Scoring**:
    - Select striker, non-striker, and bowler
    - Record each ball with run buttons or extras
    - Handle wickets with detailed dismissal forms
@@ -247,6 +272,7 @@ npm start
 
 ## 🗺️ Roadmap / Future Enhancements
 
+- [ ] Admin UI for access management (currently via SQL)
 - [ ] Player statistics aggregation and history
 - [ ] Match highlights and commentary system
 - [ ] Real-time WebSocket updates (Supabase Realtime)
@@ -257,6 +283,11 @@ npm start
 - [ ] Over-by-over summary view
 - [ ] Team management with player profiles
 - [ ] Tournament brackets and standings
+
+## 📄 Documentation
+
+- [SETUP.md](SETUP.md) - Complete setup guide with step-by-step instructions
+- [ACCESS_SETUP.md](ACCESS_SETUP.md) - Access control and user management guide
 
 ## 🤝 Contributing
 
