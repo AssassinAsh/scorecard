@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { login } from "../actions/auth";
 
 export default async function LoginPage({
@@ -12,6 +13,13 @@ export default async function LoginPage({
       style={{ background: "var(--background)" }}
     >
       <div className="w-full max-w-md">
+        <Link
+          href="/"
+          className="text-sm hover:underline mb-3 inline-block"
+          style={{ color: "var(--accent)" }}
+        >
+          ← Back to Home
+        </Link>
         <div
           className="rounded-lg p-6 sm:p-8"
           style={{

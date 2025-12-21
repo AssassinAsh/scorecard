@@ -59,7 +59,7 @@ function NewMatchForm() {
             className="mb-2 inline-block text-sm hover:underline"
             style={{ color: "var(--accent)" }}
           >
-             Back to Tournament
+            ← Back to Tournament
           </Link>
           <h1 className="text-lg sm:text-xl font-medium">Create New Match</h1>
         </div>

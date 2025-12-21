@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import {
@@ -52,16 +53,22 @@ export default async function MatchPage({
   const players = await getPlayersByMatch(id);
   const currentInnings = await getCurrentInnings(id);
   const allInnings = await getAllInnings(id);
-  const recentBalls = currentInnings
-    ? await getRecentBalls(currentInnings.id)
-    : [];
-
-  const inningsDetail = currentInnings
-    ? await getInningsWithBalls(currentInnings.id)
-    : null;
-
   const completedInnings = allInnings.filter((i) => i.is_completed);
   const firstCompletedInnings = completedInnings[0];
+
+  // In case the match is completed and there's no active innings,
+  // fall back to the last completed innings so we can still
+  // render a full scorecard for finished games.
+  const displayInnings =
+    currentInnings || completedInnings[completedInnings.length - 1] || null;
+
+  const recentBalls = displayInnings
+    ? await getRecentBalls(displayInnings.id)
+    : [];
+
+  const inningsDetail = displayInnings
+    ? await getInningsWithBalls(displayInnings.id)
+    : null;
 
   const firstInnings = allInnings[0] || null;
   const firstInningsTeam: "A" | "B" | null = firstInnings
@@ -70,28 +77,29 @@ export default async function MatchPage({
 
   // Second innings chase information
   const isSecondInnings =
-    currentInnings &&
+    displayInnings &&
     firstCompletedInnings &&
-    currentInnings.id !== firstCompletedInnings.id;
+    displayInnings.id !== firstCompletedInnings.id &&
+    match.status !== "Completed";
 
   const targetRuns = isSecondInnings
     ? firstCompletedInnings.total_runs + 1
     : null;
 
   const ballsRemaining = isSecondInnings
-    ? match.overs_per_innings * 6 - currentInnings!.balls_bowled
+    ? match.overs_per_innings * 6 - displayInnings!.balls_bowled
     : null;
 
   // Live batting and bowling stats for the current innings
   let liveBatting: LiveBattingRow[] = [];
   let liveBowling: LiveBowlingRow[] = [];
 
-  if (currentInnings && inningsDetail) {
+  if (displayInnings && inningsDetail) {
     const battingPlayersForInnings = players.filter(
-      (p) => p.team === currentInnings.batting_team
+      (p) => p.team === displayInnings.batting_team
     );
     const bowlingPlayersForInnings = players.filter(
-      (p) => p.team === currentInnings.bowling_team
+      (p) => p.team === displayInnings.bowling_team
     );
 
     const battingStatsMap = new Map<
@@ -510,29 +518,38 @@ export default async function MatchPage({
           borderColor: "var(--border)",
         }}
       >
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-medium">
-            {match.team_a_name} vs {match.team_b_name}
-          </h1>
-          <span
-            className="px-2 py-1 rounded text-xs font-medium"
-            style={{
-              background:
-                match.status === "Completed"
-                  ? "rgba(15, 157, 88, 0.1)"
-                  : match.status === "Live"
-                  ? "rgba(234, 67, 53, 0.1)"
-                  : "rgba(128, 134, 139, 0.1)",
-              color:
-                match.status === "Completed"
-                  ? "var(--success)"
-                  : match.status === "Live"
-                  ? "var(--danger)"
-                  : "var(--muted)",
-            }}
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <Link
+            href={`/tournament/${match.tournament_id}`}
+            className="text-sm hover:underline mb-2 inline-block"
+            style={{ color: "var(--accent)" }}
           >
-            {match.status}
-          </span>
+            ← Back to Tournament
+          </Link>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg sm:text-xl font-medium">
+              {match.team_a_name} vs {match.team_b_name}
+            </h1>
+            <span
+              className="px-2 py-1 rounded text-xs font-medium"
+              style={{
+                background:
+                  match.status === "Completed"
+                    ? "rgba(15, 157, 88, 0.1)"
+                    : match.status === "Live"
+                    ? "rgba(234, 67, 53, 0.1)"
+                    : "rgba(128, 134, 139, 0.1)",
+                color:
+                  match.status === "Completed"
+                    ? "var(--success)"
+                    : match.status === "Live"
+                    ? "var(--danger)"
+                    : "var(--muted)",
+              }}
+            >
+              {match.status}
+            </span>
+          </div>
         </div>
       </header>
 
@@ -573,17 +590,17 @@ export default async function MatchPage({
         )}
 
         {/* Scoring Interface (read-only) */}
-        {currentInnings ? (
+        {displayInnings ? (
           <ScoringInterface
             matchId={id}
-            inningsId={currentInnings.id}
-            battingTeam={currentInnings.batting_team}
-            bowlingTeam={currentInnings.bowling_team}
+            inningsId={displayInnings.id}
+            battingTeam={displayInnings.batting_team}
+            bowlingTeam={displayInnings.bowling_team}
             teamAName={match.team_a_name}
             teamBName={match.team_b_name}
-            currentScore={currentInnings.total_runs}
-            currentWickets={currentInnings.wickets}
-            ballsBowled={currentInnings.balls_bowled}
+            currentScore={displayInnings.total_runs}
+            currentWickets={displayInnings.wickets}
+            ballsBowled={displayInnings.balls_bowled}
             maxOvers={match.overs_per_innings}
             existingPlayers={players}
             recentBalls={recentBalls}

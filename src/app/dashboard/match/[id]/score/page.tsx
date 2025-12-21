@@ -53,16 +53,22 @@ export default async function ScoringPage({
   const players = await getPlayersByMatch(id);
   const currentInnings = await getCurrentInnings(id);
   const allInnings = await getAllInnings(id);
-  const recentBalls = currentInnings
-    ? await getRecentBalls(currentInnings.id)
-    : [];
-
-  const inningsDetail = currentInnings
-    ? await getInningsWithBalls(currentInnings.id)
-    : null;
-
   const completedInnings = allInnings.filter((i) => i.is_completed);
   const firstCompletedInnings = completedInnings[0];
+
+  // For scorers, show a scorecard even after the match is completed.
+  // Prefer the active innings if there is one, otherwise fall back to
+  // the last completed innings.
+  const displayInnings =
+    currentInnings || completedInnings[completedInnings.length - 1] || null;
+
+  const recentBalls = displayInnings
+    ? await getRecentBalls(displayInnings.id)
+    : [];
+
+  const inningsDetail = displayInnings
+    ? await getInningsWithBalls(displayInnings.id)
+    : null;
 
   const firstInnings = allInnings[0] || null;
   const firstInningsTeam: "A" | "B" | null = firstInnings
@@ -71,28 +77,29 @@ export default async function ScoringPage({
 
   // Second innings chase information
   const isSecondInnings =
-    currentInnings &&
+    displayInnings &&
     firstCompletedInnings &&
-    currentInnings.id !== firstCompletedInnings.id;
+    displayInnings.id !== firstCompletedInnings.id &&
+    match.status !== "Completed";
 
   const targetRuns = isSecondInnings
     ? firstCompletedInnings.total_runs + 1
     : null;
 
   const ballsRemaining = isSecondInnings
-    ? match.overs_per_innings * 6 - currentInnings!.balls_bowled
+    ? match.overs_per_innings * 6 - displayInnings!.balls_bowled
     : null;
 
   // Live batting and bowling stats for the current innings
   let liveBatting: LiveBattingRow[] = [];
   let liveBowling: LiveBowlingRow[] = [];
 
-  if (currentInnings && inningsDetail) {
+  if (displayInnings && inningsDetail) {
     const battingPlayersForInnings = players.filter(
-      (p) => p.team === currentInnings.batting_team
+      (p) => p.team === displayInnings.batting_team
     );
     const bowlingPlayersForInnings = players.filter(
-      (p) => p.team === currentInnings.bowling_team
+      (p) => p.team === displayInnings.bowling_team
     );
 
     const battingStatsMap = new Map<
@@ -581,17 +588,17 @@ export default async function ScoringPage({
         )}
 
         {/* Scoring Interface */}
-        {currentInnings ? (
+        {displayInnings ? (
           <ScoringInterface
             matchId={id}
-            inningsId={currentInnings.id}
-            battingTeam={currentInnings.batting_team}
-            bowlingTeam={currentInnings.bowling_team}
+            inningsId={displayInnings.id}
+            battingTeam={displayInnings.batting_team}
+            bowlingTeam={displayInnings.bowling_team}
             teamAName={match.team_a_name}
             teamBName={match.team_b_name}
-            currentScore={currentInnings.total_runs}
-            currentWickets={currentInnings.wickets}
-            ballsBowled={currentInnings.balls_bowled}
+            currentScore={displayInnings.total_runs}
+            currentWickets={displayInnings.wickets}
+            ballsBowled={displayInnings.balls_bowled}
             maxOvers={match.overs_per_innings}
             existingPlayers={players}
             recentBalls={recentBalls}
@@ -605,7 +612,7 @@ export default async function ScoringPage({
             liveBowling={liveBowling}
             firstInningsBatting={firstInningsBatting}
             firstInningsBowling={firstInningsBowling}
-            readOnly={false}
+            readOnly={match.status === "Completed"}
           />
         ) : (
           <div
