@@ -594,14 +594,25 @@ export async function deleteLastBall(inningsId: string) {
     return { error: inningsError?.message || "Innings not found" };
   }
 
-  // Recompute aggregates from remaining balls. We can safely use the
-  // in-memory snapshot (remainingBallsSnapshot) because we've verified
-  // that the corresponding row was actually deleted.
+  // Recompute aggregates from all remaining balls in database
+  const { data: remainingBalls } = await supabase
+    .from("balls")
+    .select(
+      `
+      runs_off_bat,
+      extras_runs,
+      extras_type,
+      wicket_type,
+      overs!inner(
+        innings_id
+      )
+    `
+    )
+    .eq("overs.innings_id", inningsId);
+
   let newTotalRuns = 0;
   let newWickets = 0;
   let newBallsBowled = 0;
-
-  const remainingBalls = remainingBallsSnapshot;
 
   if (remainingBalls && remainingBalls.length > 0) {
     for (const ball of remainingBalls) {
