@@ -138,6 +138,18 @@ export async function startNewOver(
     return { error: error.message };
   }
 
+  // Fetch match_id for revalidation
+  const { data: innings } = await supabase
+    .from("innings")
+    .select("match_id")
+    .eq("id", inningsId)
+    .single();
+
+  if (innings) {
+    revalidatePath(`/match/${innings.match_id}`);
+    revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+  }
+
   return { data };
 }
 
@@ -336,6 +348,23 @@ export async function getInningsWithBalls(inningsId: string) {
   return data;
 }
 
+export async function getRetirementsForInnings(inningsId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("retirements")
+    .select("*")
+    .eq("innings_id", inningsId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching retirements:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export async function getCurrentInnings(matchId: string) {
   const supabase = await createClient();
 
@@ -405,6 +434,94 @@ export async function getRecentBalls(inningsId: string, limit: number = 36) {
     ...ball,
     bowler_id: overs?.bowler_id || null,
   }));
+}
+
+export async function retireBatsman(
+  inningsId: string,
+  playerId: string,
+  reason: string
+) {
+  const supabase = await createClient();
+
+  if (!reason.trim()) {
+    return { error: "Retire reason is required" };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("retirements")
+    .select("id")
+    .eq("innings_id", inningsId)
+    .eq("player_id", playerId)
+    .limit(1);
+
+  if (existingError) {
+    return { error: existingError.message };
+  }
+
+  if (existing && existing.length > 0) {
+    return {
+      error: "This batter is already marked as retired in this innings.",
+    };
+  }
+
+  const { error } = await supabase.from("retirements").insert({
+    innings_id: inningsId,
+    player_id: playerId,
+    reason: reason.trim(),
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { data: innings } = await supabase
+    .from("innings")
+    .select("match_id")
+    .eq("id", inningsId)
+    .single();
+
+  if (innings) {
+    revalidatePath(`/match/${innings.match_id}`);
+    revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+  }
+
+  return { success: true };
+}
+
+export async function updateOverBowler(overId: string, bowlerId: string) {
+  const supabase = await createClient();
+
+  const { data: over, error: overError } = await supabase
+    .from("overs")
+    .select("innings_id")
+    .eq("id", overId)
+    .single();
+
+  if (overError || !over) {
+    return { error: overError?.message || "Over not found" };
+  }
+
+  const { error } = await supabase
+    .from("overs")
+    .update({ bowler_id: bowlerId })
+    .eq("id", overId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { data: innings } = await supabase
+    .from("innings")
+    .select("match_id")
+    .eq("id", over.innings_id)
+    .single();
+
+  if (innings) {
+    revalidatePath(`/match/${innings.match_id}`);
+    revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+  }
+
+  return { success: true };
 }
 
 // Delete the most recent ball for an innings and recompute aggregates & match state

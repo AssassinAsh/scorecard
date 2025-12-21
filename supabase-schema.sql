@@ -79,6 +79,15 @@ created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Retirement events (per player per innings)
+CREATE TABLE retirements (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+innings_id UUID REFERENCES innings(id) ON DELETE CASCADE NOT NULL,
+player_id UUID REFERENCES players(id) ON DELETE CASCADE NOT NULL,
+reason TEXT NOT NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Over Table
 CREATE TABLE overs (
 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -115,6 +124,7 @@ CREATE INDEX idx_players_match ON players(match_id);
 CREATE INDEX idx_innings_match ON innings(match_id);
 CREATE INDEX idx_overs_innings ON overs(innings_id);
 CREATE INDEX idx_balls_over ON balls(over_id);
+CREATE INDEX idx_retirements_innings ON retirements(innings_id);
 
 -- =====================
 -- ROW LEVEL SECURITY
@@ -126,6 +136,7 @@ ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE innings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE overs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE balls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE retirements ENABLE ROW LEVEL SECURITY;
 
 -- Tournaments
 CREATE POLICY "Public read tournaments"
@@ -169,6 +180,15 @@ USING (true);
 
 CREATE POLICY "Authenticated manage innings"
 ON innings FOR ALL
+USING (auth.role() = 'authenticated');
+
+-- Retirements
+CREATE POLICY "Public read retirements"
+ON retirements FOR SELECT
+USING (true);
+
+CREATE POLICY "Authenticated manage retirements"
+ON retirements FOR ALL
 USING (auth.role() = 'authenticated');
 
 -- Overs

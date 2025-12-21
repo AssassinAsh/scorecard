@@ -92,6 +92,14 @@ export interface Ball {
   created_at: string;
 }
 
+export interface Retirement {
+  id: string;
+  innings_id: string;
+  player_id: string;
+  reason: string;
+  created_at: string;
+}
+
 // Extended types with relationships
 export interface MatchWithTournament extends Match {
   tournaments: Tournament;

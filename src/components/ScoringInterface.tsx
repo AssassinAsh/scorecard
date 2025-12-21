@@ -6,6 +6,8 @@ import {
   recordBall,
   startNewOver,
   deleteLastBall,
+  retireBatsman,
+  updateOverBowler,
 } from "@/app/actions/scoring";
 import { createPlayer } from "@/app/actions/matches";
 import {
@@ -15,6 +17,7 @@ import {
   calculateRunRate,
   calculateRequiredRunRate,
   formatRunRate,
+  isLegalBall,
 } from "@/lib/cricket/scoring";
 import type { Ball, Player, ExtrasType, WicketType } from "@/types";
 
@@ -191,11 +194,21 @@ export default function ScoringInterface({
   // Loading states
   const [isRecording, setIsRecording] = useState(false);
   const [isAddingNewOverBowler, setIsAddingNewOverBowler] = useState(false);
+  const [isSavingPlayer, setIsSavingPlayer] = useState(false);
 
   // Undo / strike change modals
   const [showDeleteLastBallModal, setShowDeleteLastBallModal] = useState(false);
   const [isDeletingLastBall, setIsDeletingLastBall] = useState(false);
   const [showChangeStrikeModal, setShowChangeStrikeModal] = useState(false);
+
+  // Retire batsman modal
+  const [showRetireModal, setShowRetireModal] = useState(false);
+  const [retirePlayerId, setRetirePlayerId] = useState<string>("");
+  const [retireReason, setRetireReason] = useState<string>("");
+
+  // Change bowler modal (for current over)
+  const [showChangeBowlerModal, setShowChangeBowlerModal] = useState(false);
+  const [newBowlerForOverId, setNewBowlerForOverId] = useState<string>("");
 
   // Collapsible full scorecard
   const [showScorecard, setShowScorecard] = useState(false);
@@ -232,16 +245,43 @@ export default function ScoringInterface({
   const bowlingPlayers = existingPlayers.filter((p) => p.team === bowlingTeam);
   const fieldingPlayers = bowlingPlayers;
 
-  // Get all balls from the current over (including wides/no-balls)
-  // Use currentOverId state instead of latestOverId to track active over
+  // Balls belonging to the currently selected over (used for ball_number
+  // and change-bowler logic). This may represent only part of the
+  // scorecard "over" if the bowler was changed mid-over.
   const currentOverBalls = recentBalls.filter(
     (b) => b.over_id === currentOverId
   );
-  const legalBallsInOver = currentOverBalls.filter(
-    (b) => b.extras_type !== "Wide" && b.extras_type !== "NoBall"
+  const legalBallsInCurrentSegment = currentOverBalls.filter((b) =>
+    isLegalBall(b.extras_type as ExtrasType)
   ).length;
 
-  const needsNewOver = legalBallsInOver >= 6 && currentOverId !== "";
+  // Global over state is driven by innings.balls_bowled. This ensures that
+  // over completion and the "This Over" display are correct even when a
+  // bowler is changed mid-over.
+  const totalLegalBalls = ballsBowled;
+  const legalThisOver = totalLegalBalls === 0 ? 0 : totalLegalBalls % 6;
+  const targetLegalForDisplay =
+    totalLegalBalls === 0 ? 0 : legalThisOver === 0 ? 6 : legalThisOver;
+
+  const displayOverBalls: Ball[] = [];
+  if (targetLegalForDisplay > 0) {
+    let legalCount = 0;
+    for (const ball of recentBalls) {
+      // recentBalls is newest-first; build display list in chronological order
+      displayOverBalls.unshift(ball);
+      if (isLegalBall(ball.extras_type as ExtrasType)) {
+        legalCount += 1;
+        if (legalCount >= targetLegalForDisplay) {
+          break;
+        }
+      }
+    }
+  }
+
+  // A new over is needed whenever we've completed a multiple of 6 legal
+  // balls in the innings (and at least one over has been bowled).
+  const needsNewOver =
+    !readOnly && totalLegalBalls > 0 && totalLegalBalls % 6 === 0;
 
   // Get player names
   const strikerName =
@@ -289,75 +329,86 @@ export default function ScoringInterface({
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return;
 
+    setIsSavingPlayer(true);
+
     const team = ["bowler", "keeper", "fielder"].includes(addingPlayerFor)
       ? bowlingTeam
       : battingTeam;
     const battingOrder =
       (team === battingTeam ? battingPlayers : bowlingPlayers).length + 1;
 
-    const result = await createPlayer(matchId, {
-      name: newPlayerName.trim(),
-      team,
-      batting_order: battingOrder,
-    });
+    try {
+      const result = await createPlayer(matchId, {
+        name: newPlayerName.trim(),
+        team,
+        batting_order: battingOrder,
+      });
 
-    if (!result || result.error || !result.data) {
-      if (result?.error) {
-        alert(result.error);
-      } else {
-        alert("Error creating player");
-      }
-      return;
-    }
-
-    const newPlayer = result.data;
-
-    if (newPlayer) {
-      if (addingPlayerFor === "striker") setStrikerId(newPlayer.id);
-      else if (addingPlayerFor === "nonStriker") setNonStrikerId(newPlayer.id);
-      else if (addingPlayerFor === "bowler") setBowlerId(newPlayer.id);
-      else if (addingPlayerFor === "keeper") setKeeperId(newPlayer.id);
-      else if (addingPlayerFor === "fielder") setFielderId(newPlayer.id);
-
-      // Only reload for keeper/fielder (during wicket recording)
-      // For batsman/bowler, state update is enough
-      if (addingPlayerFor === "keeper" || addingPlayerFor === "fielder") {
-        router.refresh();
-      }
-
-      // If we just added a new bowler specifically for the next over,
-      // start that over immediately with this new bowler.
-      if (addingPlayerFor === "bowler" && isAddingNewOverBowler) {
-        const overNumber = Math.floor(ballsBowled / 6) + 1;
-        const result = await startNewOver(inningsId, overNumber, newPlayer.id);
-
+      if (!result || result.error || !result.data) {
         if (result?.error) {
           alert(result.error);
-          setIsAddingNewOverBowler(false);
-          return;
+        } else {
+          alert("Error creating player");
+        }
+        return;
+      }
+
+      const newPlayer = result.data;
+
+      if (newPlayer) {
+        if (addingPlayerFor === "striker") setStrikerId(newPlayer.id);
+        else if (addingPlayerFor === "nonStriker")
+          setNonStrikerId(newPlayer.id);
+        else if (addingPlayerFor === "bowler") setBowlerId(newPlayer.id);
+        else if (addingPlayerFor === "keeper") setKeeperId(newPlayer.id);
+        else if (addingPlayerFor === "fielder") setFielderId(newPlayer.id);
+
+        // Only reload for keeper/fielder (during wicket recording)
+        // For batsman/bowler, state update is enough
+        if (addingPlayerFor === "keeper" || addingPlayerFor === "fielder") {
+          router.refresh();
         }
 
-        if (result?.data) {
-          setBowlerId(newPlayer.id);
-          setCurrentOverId(result.data.id);
-          hasSetNewOver.current = true;
+        // If we just added a new bowler specifically for the next over,
+        // start that over immediately with this new bowler.
+        if (addingPlayerFor === "bowler" && isAddingNewOverBowler) {
+          const overNumber = Math.floor(ballsBowled / 6) + 1;
+          const result = await startNewOver(
+            inningsId,
+            overNumber,
+            newPlayer.id
+          );
 
-          // Rotate strike at end of over (only if this is not the first over)
-          if (ballsBowled > 0) {
-            const temp = strikerId;
-            setStrikerId(nonStrikerId);
-            setNonStrikerId(temp);
+          if (result?.error) {
+            alert(result.error);
+            setIsAddingNewOverBowler(false);
+            return;
           }
 
-          setShowNewOverModal(false);
+          if (result?.data) {
+            setBowlerId(newPlayer.id);
+            setCurrentOverId(result.data.id);
+            hasSetNewOver.current = true;
+
+            // Rotate strike at end of over (only if this is not the first over)
+            if (ballsBowled > 0) {
+              const temp = strikerId;
+              setStrikerId(nonStrikerId);
+              setNonStrikerId(temp);
+            }
+
+            setShowNewOverModal(false);
+          }
+
+          setIsAddingNewOverBowler(false);
         }
-
-        setIsAddingNewOverBowler(false);
       }
-    }
 
-    setNewPlayerName("");
-    setShowAddPlayer(false);
+      setNewPlayerName("");
+      setShowAddPlayer(false);
+    } finally {
+      setIsSavingPlayer(false);
+    }
   };
 
   // Handle starting first over with already-selected bowler
@@ -398,6 +449,84 @@ export default function ScoringInterface({
     } finally {
       setIsDeletingLastBall(false);
       setShowDeleteLastBallModal(false);
+    }
+  };
+
+  const handleRetireBatsman = async () => {
+    if (!inningsId || !retirePlayerId || !retireReason.trim()) {
+      return;
+    }
+
+    const result = await retireBatsman(inningsId, retirePlayerId, retireReason);
+
+    if ((result as any)?.error) {
+      alert((result as any).error);
+      return;
+    }
+
+    // Clear retired batter from strike if needed and prompt a replacement batter
+    if (retirePlayerId === strikerId) {
+      setStrikerId("");
+      setAddingPlayerFor("striker");
+      setShowAddPlayer(true);
+    } else if (retirePlayerId === nonStrikerId) {
+      setNonStrikerId("");
+      setAddingPlayerFor("nonStriker");
+      setShowAddPlayer(true);
+    }
+
+    setShowRetireModal(false);
+    setRetirePlayerId("");
+    setRetireReason("");
+
+    router.refresh();
+  };
+
+  const handleChangeBowlerForOver = async () => {
+    if (!currentOverId || !newBowlerForOverId) return;
+
+    // If no balls have been bowled in this over yet, simply correct the bowler
+    if (currentOverBalls.length === 0) {
+      const result = await updateOverBowler(currentOverId, newBowlerForOverId);
+
+      if ((result as any)?.error) {
+        alert((result as any).error);
+        return;
+      }
+
+      setBowlerId(newBowlerForOverId);
+      setShowChangeBowlerModal(false);
+      setNewBowlerForOverId("");
+      router.refresh();
+      return;
+    }
+
+    // Mid-over change: start a new over for the new bowler so that
+    // previously bowled balls remain credited to the original bowler.
+    const overNumber = Math.floor(ballsBowled / 6) + 1;
+    const result = await startNewOver(
+      inningsId,
+      overNumber,
+      newBowlerForOverId
+    );
+
+    if (result?.error) {
+      alert(result.error);
+      return;
+    }
+
+    if (result?.data) {
+      setBowlerId(newBowlerForOverId);
+      setCurrentOverId(result.data.id);
+      hasSetNewOver.current = true;
+      setShowChangeBowlerModal(false);
+      setNewBowlerForOverId("");
+
+      // Refresh and wait for server data to update
+      router.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    } else {
+      alert("Could not change bowler");
     }
   };
 
@@ -487,7 +616,7 @@ export default function ScoringInterface({
 
       const ballData = {
         over_id: currentOverId,
-        ball_number: legalBallsInOver + 1,
+        ball_number: legalBallsInCurrentSegment + 1,
         striker_id: strikerId,
         non_striker_id: nonStrikerId,
         runs_off_bat: runs,
@@ -659,7 +788,7 @@ export default function ScoringInterface({
               <span className="muted-text">
                 {bowlerStats
                   ? `${bowlerStats.overs}-${bowlerStats.maidens}-${bowlerStats.runs}-${bowlerStats.wickets}`
-                  : `${calculateOvers(legalBallsInOver)}-0-0-0`}
+                  : `0-0-0-0`}
               </span>
             </div>
           </div>
@@ -672,10 +801,10 @@ export default function ScoringInterface({
         >
           <p className="text-xs muted-text mb-2">This Over:</p>
           <div className="flex gap-2 flex-wrap">
-            {currentOverBalls.length === 0 ? (
+            {displayOverBalls.length === 0 ? (
               <span className="text-sm muted-text">No balls yet</span>
             ) : (
-              currentOverBalls.map((ball, idx) => (
+              displayOverBalls.map((ball, idx) => (
                 <span
                   key={idx}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
@@ -1197,6 +1326,45 @@ export default function ScoringInterface({
                 }}
               >
                 ⇄ Change Strike
+              </button>
+            )}
+
+            {/* Retire Batsman Button */}
+            {(strikerId || nonStrikerId) && (
+              <button
+                onClick={() => {
+                  setRetirePlayerId(strikerId || nonStrikerId);
+                  setRetireReason("retired hurt");
+                  setShowRetireModal(true);
+                }}
+                disabled={isRecording}
+                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Retire Batsman
+              </button>
+            )}
+
+            {/* Change Bowler (Current Over) Button */}
+            {bowlerId && (
+              <button
+                onClick={() => {
+                  setNewBowlerForOverId(bowlerId);
+                  setShowChangeBowlerModal(true);
+                }}
+                disabled={isRecording}
+                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Change Bowler (This Over)
               </button>
             )}
           </div>
@@ -1723,10 +1891,11 @@ export default function ScoringInterface({
             <div className="flex gap-2">
               <button
                 onClick={handleAddPlayer}
-                className="flex-1 py-2 rounded-md text-sm font-medium text-white"
+                disabled={isSavingPlayer || !newPlayerName.trim()}
+                className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--accent)" }}
               >
-                {addPlayerButtonLabel}
+                {isSavingPlayer ? "Saving..." : addPlayerButtonLabel}
               </button>
               <button
                 onClick={() => {
@@ -1914,6 +2083,175 @@ export default function ScoringInterface({
               </button>
               <button
                 onClick={() => setShowChangeStrikeModal(false)}
+                className="flex-1 py-2 rounded-md text-sm font-medium"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Retire Batsman Modal - Only for scorers */}
+      {!readOnly && showRetireModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div
+            className="max-w-md w-full rounded-lg p-6"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h3 className="text-lg font-medium mb-4">Retire Batsman</h3>
+            <p className="text-sm muted-text mb-3">
+              Select the batter to retire and provide a reason. This will not
+              count as a wicket but will be shown in the scorecard.
+            </p>
+
+            <div className="mb-3 text-sm">
+              <label className="text-sm muted-text mb-1 block">
+                Batsman to retire
+              </label>
+              <select
+                value={retirePlayerId}
+                onChange={(e) => setRetirePlayerId(e.target.value)}
+                className="w-full px-3 py-2 rounded-md text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <option value="">Select batsman...</option>
+                {strikerId && (
+                  <option value={strikerId}>{strikerName} (Striker)</option>
+                )}
+                {nonStrikerId && (
+                  <option value={nonStrikerId}>
+                    {nonStrikerName} (Non-Striker)
+                  </option>
+                )}
+              </select>
+            </div>
+
+            <div className="mb-4 text-sm">
+              <label className="text-sm muted-text mb-1 block">
+                Reason (e.g., retired hurt)
+              </label>
+              <input
+                type="text"
+                value={retireReason}
+                onChange={(e) => setRetireReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-md text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+                placeholder="Retired hurt"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleRetireBatsman}
+                disabled={!retirePlayerId || !retireReason.trim()}
+                className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "var(--accent)" }}
+              >
+                Confirm Retirement
+              </button>
+              <button
+                onClick={() => {
+                  setShowRetireModal(false);
+                  setRetirePlayerId("");
+                  setRetireReason("");
+                }}
+                className="flex-1 py-2 rounded-md text-sm font-medium"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Bowler for Current Over Modal - Only for scorers */}
+      {!readOnly && showChangeBowlerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div
+            className="max-w-md w-full rounded-lg p-6"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h3 className="text-lg font-medium mb-4">
+              Change Bowler for This Over
+            </h3>
+            <p className="text-sm muted-text mb-3">
+              This will update the bowler for all balls in the current over. Use
+              this to correct a bowler selection or handle a mid-over change.
+            </p>
+
+            <div className="mb-4 text-sm">
+              <label className="text-sm muted-text mb-1 block">Bowler</label>
+              <div className="flex gap-2">
+                <select
+                  value={newBowlerForOverId}
+                  onChange={(e) => setNewBowlerForOverId(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-md text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <option value="">Select bowler...</option>
+                  {bowlingPlayers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    setAddingPlayerFor("bowler");
+                    setShowAddPlayer(true);
+                    setShowChangeBowlerModal(false);
+                  }}
+                  className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
+                  style={{ background: "var(--accent)" }}
+                >
+                  + New
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleChangeBowlerForOver}
+                disabled={!newBowlerForOverId}
+                className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "var(--accent)" }}
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => {
+                  setShowChangeBowlerModal(false);
+                  setNewBowlerForOverId("");
+                }}
                 className="flex-1 py-2 rounded-md text-sm font-medium"
                 style={{
                   background: "var(--background)",

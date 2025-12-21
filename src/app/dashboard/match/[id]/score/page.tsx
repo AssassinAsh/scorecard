@@ -5,6 +5,7 @@ import {
   getAllInnings,
   getRecentBalls,
   getInningsWithBalls,
+  getRetirementsForInnings,
 } from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
 import {
@@ -69,6 +70,10 @@ export default async function ScoringPage({
   const inningsDetail = displayInnings
     ? await getInningsWithBalls(displayInnings.id)
     : null;
+
+  const retirements = displayInnings
+    ? await getRetirementsForInnings(displayInnings.id)
+    : [];
 
   const firstInnings = allInnings[0] || null;
   const firstInningsTeam: "A" | "B" | null = firstInnings
@@ -263,6 +268,11 @@ export default async function ScoringPage({
       }
     }
 
+    const retirementMap = new Map<string, string>();
+    for (const r of retirements) {
+      retirementMap.set(r.player_id, r.reason);
+    }
+
     liveBatting = battingPlayersForInnings
       .slice()
       .sort((a, b) => a.batting_order - b.batting_order)
@@ -270,7 +280,12 @@ export default async function ScoringPage({
         const s =
           battingStatsMap.get(player.id) ||
           ({ runs: 0, balls: 0, fours: 0, sixes: 0 } as const);
-        const dismissal = dismissalMap.get(player.id) || null;
+        let dismissal: string | null = dismissalMap.get(player.id) || null;
+
+        const retireReason = retirementMap.get(player.id);
+        if (retireReason) {
+          dismissal = `retired ${retireReason}`;
+        }
         return {
           playerId: player.id,
           name: player.name,
@@ -590,6 +605,7 @@ export default async function ScoringPage({
         {/* Scoring Interface */}
         {displayInnings ? (
           <ScoringInterface
+            key={`${displayInnings.id}-${recentBalls.length}-${liveBowling.length}`}
             matchId={id}
             inningsId={displayInnings.id}
             battingTeam={displayInnings.batting_team}
