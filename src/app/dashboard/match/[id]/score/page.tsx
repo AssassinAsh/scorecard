@@ -13,9 +13,12 @@ import {
   formatOvers,
   calculateOvers,
   calculateBallRuns,
+  calculateRunRate,
+  formatRunRate,
   isLegalBall,
 } from "@/lib/cricket/scoring";
 import ScoringInterface from "@/components/ScoringInterface";
+import StartSecondInningsButton from "@/components/StartSecondInningsButton";
 
 type LiveBattingRow = {
   playerId: string;
@@ -57,6 +60,14 @@ export default async function ScoringPage({
   const completedInnings = allInnings.filter((i) => i.is_completed);
   const firstCompletedInnings = completedInnings[0];
 
+  const hasActiveInnings = Boolean(currentInnings);
+
+  const secondInningsBattingTeamName = firstCompletedInnings
+    ? firstCompletedInnings.bowling_team === "A"
+      ? match.team_a_name
+      : match.team_b_name
+    : "";
+
   // For scorers, show a scorecard even after the match is completed.
   // Prefer the active innings if there is one, otherwise fall back to
   // the last completed innings.
@@ -95,9 +106,77 @@ export default async function ScoringPage({
     ? match.overs_per_innings * 6 - displayInnings!.balls_bowled
     : null;
 
+  // Extras for the current/last innings
+  let currentInningsExtras: number | null = null;
+
   // Live batting and bowling stats for the current innings
   let liveBatting: LiveBattingRow[] = [];
   let liveBowling: LiveBowlingRow[] = [];
+
+  // Match result text for completed games
+  let matchResult: string | null = null;
+
+  if (match.status === "Completed" && completedInnings.length >= 2) {
+    const firstInningsCompleted = completedInnings[0];
+    const secondInningsCompleted = completedInnings[1];
+
+    const winnerSide = match.winner_team;
+    const winnerName =
+      winnerSide === "A"
+        ? match.team_a_name
+        : winnerSide === "B"
+        ? match.team_b_name
+        : null;
+
+    if (winnerName) {
+      const firstRuns = firstInningsCompleted.total_runs;
+      const secondRuns = secondInningsCompleted.total_runs;
+
+      if (winnerSide === firstInningsCompleted.batting_team) {
+        const margin = Math.max(firstRuns - secondRuns, 0);
+        matchResult =
+          margin > 0
+            ? `${winnerName} won by ${margin} run${margin === 1 ? "" : "s"}.`
+            : `${winnerName} won the match.`;
+      } else if (winnerSide === secondInningsCompleted.batting_team) {
+        const wicketsRemaining = Math.max(
+          10 - secondInningsCompleted.wickets,
+          1
+        );
+        matchResult = `${winnerName} won by ${wicketsRemaining} wicket${
+          wicketsRemaining === 1 ? "" : "s"
+        }.`;
+      }
+    } else if (firstCompletedInnings && completedInnings.length >= 2) {
+      const firstRuns = completedInnings[0].total_runs;
+      const secondRuns = completedInnings[1].total_runs;
+      if (firstRuns === secondRuns) {
+        matchResult = "Match tied.";
+      }
+    }
+  }
+
+  // Final team summaries for completed matches
+  let teamASummary: { runs: number; wickets: number; overs: string } | null =
+    null;
+  let teamBSummary: { runs: number; wickets: number; overs: string } | null =
+    null;
+
+  if (match.status === "Completed" && completedInnings.length > 0) {
+    for (const inning of completedInnings) {
+      const summary = {
+        runs: inning.total_runs,
+        wickets: inning.wickets,
+        overs: formatOvers(calculateOvers(inning.balls_bowled)),
+      };
+
+      if (inning.batting_team === "A") {
+        teamASummary = summary;
+      } else {
+        teamBSummary = summary;
+      }
+    }
+  }
 
   if (displayInnings && inningsDetail) {
     const battingPlayersForInnings = players.filter(
@@ -138,6 +217,12 @@ export default async function ScoringPage({
       for (const over of inningsDetail.overs) {
         const overBalls = over.balls || [];
         const bowlerId: string | null = over.bowler_id;
+
+        // Extras for this innings
+        for (const ball of overBalls) {
+          currentInningsExtras =
+            (currentInningsExtras || 0) + (ball.extras_runs || 0);
+        }
 
         // Batting stats from each ball
         for (const ball of overBalls) {
@@ -316,9 +401,16 @@ export default async function ScoringPage({
       .filter((row): row is LiveBowlingRow => row !== null);
   }
 
+  const betweenInnings =
+    !hasActiveInnings &&
+    completedInnings.length === 1 &&
+    match.status === "Innings Break";
+
   // First innings scorecard data (for display during second innings)
   let firstInningsBatting: LiveBattingRow[] = [];
   let firstInningsBowling: LiveBowlingRow[] = [];
+  let firstInningsExtras: number | null = null;
+  let firstInningsRunRate: string | null = null;
 
   if (firstCompletedInnings) {
     const firstDetail = await getInningsWithBalls(firstCompletedInnings.id);
@@ -357,15 +449,19 @@ export default async function ScoringPage({
 
       const firstDismissalMap = new Map<string, string>();
 
+      let extras = 0;
+
       for (const over of firstDetail.overs) {
         const overBalls = over.balls || [];
         const bowlerId: string | null = over.bowler_id;
 
-        // Batting stats
+        // Batting stats and extras
         for (const ball of overBalls) {
           const strikerId: string = ball.striker_id;
           const runsOffBat: number = ball.runs_off_bat;
           const legal = isLegalBall(ball.extras_type);
+
+          extras += ball.extras_runs;
 
           if (!firstBattingStats.has(strikerId)) {
             firstBattingStats.set(strikerId, {
@@ -488,6 +584,14 @@ export default async function ScoringPage({
         }
       }
 
+      firstInningsExtras = extras;
+      firstInningsRunRate = formatRunRate(
+        calculateRunRate(
+          firstCompletedInnings.total_runs,
+          firstCompletedInnings.balls_bowled
+        )
+      );
+
       firstInningsBatting = battingPlayersForFirst
         .slice()
         .sort((a, b) => a.batting_order - b.batting_order)
@@ -602,10 +706,27 @@ export default async function ScoringPage({
           </div>
         )}
 
-        {/* Scoring Interface */}
-        {displayInnings ? (
+        {/* Scoring Interface or Second Innings CTA */}
+        {betweenInnings ? (
+          <div
+            className="rounded-lg p-6 text-center"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <h2 className="text-base font-medium mb-2">Start Second Innings</h2>
+            <p className="text-sm muted-text mb-4">
+              {secondInningsBattingTeamName} will bat next.
+            </p>
+            <StartSecondInningsButton
+              matchId={id}
+              battingTeamName={secondInningsBattingTeamName}
+            />
+          </div>
+        ) : displayInnings ? (
           <ScoringInterface
-            key={`${displayInnings.id}-${recentBalls.length}-${liveBowling.length}`}
+            key={displayInnings.id}
             matchId={id}
             inningsId={displayInnings.id}
             battingTeam={displayInnings.batting_team}
@@ -628,7 +749,13 @@ export default async function ScoringPage({
             liveBowling={liveBowling}
             firstInningsBatting={firstInningsBatting}
             firstInningsBowling={firstInningsBowling}
-            readOnly={match.status === "Completed"}
+            currentInningsExtras={currentInningsExtras}
+            firstInningsExtras={firstInningsExtras}
+            firstInningsRunRate={firstInningsRunRate}
+            teamASummary={teamASummary}
+            teamBSummary={teamBSummary}
+            matchResult={matchResult}
+            readOnly={match.status !== "Live"}
           />
         ) : (
           <div

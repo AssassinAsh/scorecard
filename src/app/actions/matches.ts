@@ -26,8 +26,8 @@ export async function createMatch(formData: CreateMatchForm) {
     .from("matches")
     .insert({
       tournament_id: formData.tournament_id,
-      team_a_name: formData.team_a_name,
-      team_b_name: formData.team_b_name,
+      team_a_id: formData.team_a_id,
+      team_b_id: formData.team_b_id,
       match_date: formData.match_date,
       overs_per_innings: formData.overs_per_innings,
       status: "Upcoming",
@@ -48,7 +48,13 @@ export async function getMatchesByTournament(tournamentId: string) {
 
   const { data, error } = await supabase
     .from("matches")
-    .select("*")
+    .select(
+      `
+      *,
+      team_a:teams!matches_team_a_id_fkey(id, name),
+      team_b:teams!matches_team_b_id_fkey(id, name)
+    `
+    )
     .eq("tournament_id", tournamentId)
     .order("match_date", { ascending: true });
 
@@ -57,7 +63,12 @@ export async function getMatchesByTournament(tournamentId: string) {
     return [];
   }
 
-  return data;
+  // Flatten team data for compatibility, falling back to legacy columns
+  return (data || []).map((match: any) => ({
+    ...match,
+    team_a_name: match.team_a?.name || match.team_a_name || "",
+    team_b_name: match.team_b?.name || match.team_b_name || "",
+  }));
 }
 
 export async function getMatchById(id: string) {
@@ -68,7 +79,9 @@ export async function getMatchById(id: string) {
     .select(
       `
       *,
-      tournaments (*)
+      tournaments (*),
+      team_a:teams!matches_team_a_id_fkey(id, name),
+      team_b:teams!matches_team_b_id_fkey(id, name)
     `
     )
     .eq("id", id)
@@ -77,6 +90,15 @@ export async function getMatchById(id: string) {
   if (error) {
     console.error("Error fetching match:", error);
     return null;
+  }
+
+  // Flatten team data for compatibility, falling back to legacy columns
+  if (data) {
+    return {
+      ...data,
+      team_a_name: data.team_a?.name || (data as any).team_a_name || "",
+      team_b_name: data.team_b?.name || (data as any).team_b_name || "",
+    };
   }
 
   return data;

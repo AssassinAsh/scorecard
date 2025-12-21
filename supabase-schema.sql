@@ -38,12 +38,23 @@ created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Team Table
+CREATE TABLE teams (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+tournament_id UUID REFERENCES tournaments(id) ON DELETE CASCADE NOT NULL,
+name TEXT NOT NULL,
+contact_number TEXT,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+UNIQUE(tournament_id, name)
+);
+
 -- Match Table
 CREATE TABLE matches (
 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 tournament_id UUID REFERENCES tournaments(id) ON DELETE CASCADE NOT NULL,
-team_a_name TEXT NOT NULL,
-team_b_name TEXT NOT NULL,
+team_a_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
+team_b_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
 match_date DATE NOT NULL,
 overs_per_innings INTEGER NOT NULL DEFAULT 20 CHECK (overs_per_innings > 0),
 status match_status NOT NULL DEFAULT 'Upcoming',
@@ -118,6 +129,7 @@ created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 -- INDEXES
 -- =====================
 
+CREATE INDEX idx_teams_tournament ON teams(tournament_id);
 CREATE INDEX idx_matches_tournament ON matches(tournament_id);
 CREATE INDEX idx_matches_status ON matches(status);
 CREATE INDEX idx_players_match ON players(match_id);
@@ -131,6 +143,7 @@ CREATE INDEX idx_retirements_innings ON retirements(innings_id);
 -- =====================
 
 ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE innings ENABLE ROW LEVEL SECURITY;
@@ -150,6 +163,15 @@ WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Owner update tournaments"
 ON tournaments FOR UPDATE
 USING (auth.uid() = created_by);
+
+-- Teams
+CREATE POLICY "Public read teams"
+ON teams FOR SELECT
+USING (true);
+
+CREATE POLICY "Authenticated manage teams"
+ON teams FOR ALL
+USING (auth.role() = 'authenticated');
 
 -- Matches
 CREATE POLICY "Public read matches"

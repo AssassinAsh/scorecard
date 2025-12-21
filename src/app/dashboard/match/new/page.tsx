@@ -4,19 +4,79 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createMatch } from "@/app/actions/matches";
+import { getTeamsByTournament, createTeam } from "@/app/actions/teams";
+import type { TeamInfo } from "@/types";
 
 function NewMatchForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [teams, setTeams] = useState<TeamInfo[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [showTeamAModal, setShowTeamAModal] = useState(false);
+  const [showTeamBModal, setShowTeamBModal] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamContact, setNewTeamContact] = useState("");
+  const [savingNewTeam, setSavingNewTeam] = useState(false);
+  const [selectedTeamA, setSelectedTeamA] = useState("");
+  const [selectedTeamB, setSelectedTeamB] = useState("");
+
   const tournamentId = searchParams.get("tournament_id");
 
   useEffect(() => {
     if (!tournamentId) {
       router.push("/dashboard");
+      return;
     }
+
+    loadTeams();
   }, [tournamentId, router]);
+
+  async function loadTeams() {
+    if (!tournamentId) return;
+    setLoadingTeams(true);
+    const data = await getTeamsByTournament(tournamentId);
+    setTeams(data);
+    setLoadingTeams(false);
+  }
+
+  async function handleCreateNewTeam(forTeamA: boolean) {
+    if (!newTeamName.trim() || !tournamentId) return;
+
+    setSavingNewTeam(true);
+    const result = await createTeam({
+      tournament_id: tournamentId,
+      name: newTeamName.trim(),
+      contact_number: newTeamContact.trim() || undefined,
+    });
+
+    if (result.error) {
+      setError(result.error);
+      setSavingNewTeam(false);
+      return;
+    }
+
+    if (result.team) {
+      // Refresh teams list
+      await loadTeams();
+
+      // Select the newly created team
+      if (forTeamA) {
+        setSelectedTeamA(result.team.id);
+        setShowTeamAModal(false);
+      } else {
+        setSelectedTeamB(result.team.id);
+        setShowTeamBModal(false);
+      }
+
+      // Reset form
+      setNewTeamName("");
+      setNewTeamContact("");
+    }
+
+    setSavingNewTeam(false);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,8 +87,8 @@ function NewMatchForm() {
 
     const result = await createMatch({
       tournament_id: tournamentId!,
-      team_a_name: formData.get("team_a_name") as string,
-      team_b_name: formData.get("team_b_name") as string,
+      team_a_id: formData.get("team_a_id") as string,
+      team_b_id: formData.get("team_b_id") as string,
       match_date: formData.get("match_date") as string,
       overs_per_innings: parseInt(formData.get("overs_per_innings") as string),
     });
@@ -74,50 +134,92 @@ function NewMatchForm() {
           }}
         >
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Team A Selection */}
             <div>
               <label
-                htmlFor="team_a_name"
+                htmlFor="team_a_id"
                 className="block text-sm font-medium mb-1"
                 style={{ color: "var(--muted)" }}
               >
-                Team A Name *
+                Team A *
               </label>
-              <input
-                id="team_a_name"
-                name="team_a_name"
-                type="text"
-                required
-                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-                placeholder="Mumbai Indians"
-              />
+              <div className="flex gap-2">
+                <select
+                  id="team_a_id"
+                  name="team_a_id"
+                  required
+                  value={selectedTeamA}
+                  onChange={(e) => setSelectedTeamA(e.target.value)}
+                  disabled={loadingTeams}
+                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <option value="">
+                    {loadingTeams ? "Loading teams..." : "Select Team A"}
+                  </option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowTeamAModal(true)}
+                  className="px-4 py-2 rounded-md text-sm font-medium text-white"
+                  style={{ background: "var(--accent)" }}
+                >
+                  + New
+                </button>
+              </div>
             </div>
 
+            {/* Team B Selection */}
             <div>
               <label
-                htmlFor="team_b_name"
+                htmlFor="team_b_id"
                 className="block text-sm font-medium mb-1"
                 style={{ color: "var(--muted)" }}
               >
-                Team B Name *
+                Team B *
               </label>
-              <input
-                id="team_b_name"
-                name="team_b_name"
-                type="text"
-                required
-                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-                placeholder="Chennai Super Kings"
-              />
+              <div className="flex gap-2">
+                <select
+                  id="team_b_id"
+                  name="team_b_id"
+                  required
+                  value={selectedTeamB}
+                  onChange={(e) => setSelectedTeamB(e.target.value)}
+                  disabled={loadingTeams}
+                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <option value="">
+                    {loadingTeams ? "Loading teams..." : "Select Team B"}
+                  </option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowTeamBModal(true)}
+                  className="px-4 py-2 rounded-md text-sm font-medium text-white"
+                  style={{ background: "var(--accent)" }}
+                >
+                  + New
+                </button>
+              </div>
             </div>
 
             <div>
@@ -193,6 +295,105 @@ function NewMatchForm() {
           </form>
         </div>
       </main>
+
+      {/* Add Team Modal */}
+      {(showTeamAModal || showTeamBModal) && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: "rgba(0, 0, 0, 0.5)" }}
+          onClick={() => {
+            setShowTeamAModal(false);
+            setShowTeamBModal(false);
+          }}
+        >
+          <div
+            className="rounded-lg p-6 w-full max-w-md"
+            style={{
+              background: "var(--card-bg)",
+              border: "1px solid var(--border)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-medium mb-4">
+              Add New Team {showTeamAModal ? "A" : "B"}
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor="new_team_name"
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "var(--muted)" }}
+                >
+                  Team Name *
+                </label>
+                <input
+                  id="new_team_name"
+                  type="text"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                  placeholder="Mumbai Indians"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="new_team_contact"
+                  className="block text-sm font-medium mb-1"
+                  style={{ color: "var(--muted)" }}
+                >
+                  Contact Number
+                </label>
+                <input
+                  id="new_team_contact"
+                  type="tel"
+                  value={newTeamContact}
+                  onChange={(e) => setNewTeamContact(e.target.value)}
+                  className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                  placeholder="+91 9876543210"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleCreateNewTeam(showTeamAModal)}
+                  disabled={!newTeamName.trim() || savingNewTeam}
+                  className="flex-1 py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                  style={{ background: "var(--accent)" }}
+                >
+                  {savingNewTeam ? "Saving..." : "Add Team"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowTeamAModal(false);
+                    setShowTeamBModal(false);
+                    setNewTeamName("");
+                    setNewTeamContact("");
+                  }}
+                  className="px-4 py-2 rounded-md text-sm font-medium"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

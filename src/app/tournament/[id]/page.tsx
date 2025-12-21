@@ -18,8 +18,22 @@ export default async function TournamentPage({
 
   const matches = await getMatchesByTournament(id);
 
+  // Sort matches by status: Live > Starting Soon > Upcoming > Innings Break > Completed
+  const statusOrder = {
+    Live: 1,
+    "Starting Soon": 2,
+    Upcoming: 3,
+    "Innings Break": 4,
+    Completed: 5,
+  };
+  const sortedMatches = matches.sort((a, b) => {
+    const orderA = statusOrder[a.status as keyof typeof statusOrder] || 4;
+    const orderB = statusOrder[b.status as keyof typeof statusOrder] || 4;
+    return orderA - orderB;
+  });
+
   const matchesWithResult = await Promise.all(
-    matches.map(async (match) => {
+    sortedMatches.map(async (match) => {
       let winnerText: string | null = null;
 
       if (match.status === "Completed") {

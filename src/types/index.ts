@@ -29,11 +29,22 @@ export interface Tournament {
   updated_at: string;
 }
 
+export interface TeamInfo {
+  id: string;
+  tournament_id: string;
+  name: string;
+  contact_number: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Match {
   id: string;
   tournament_id: string;
-  team_a_name: string;
-  team_b_name: string;
+  team_a_id: string;
+  team_b_id: string;
+  team_a_name: string; // Joined field - now required with default
+  team_b_name: string; // Joined field - now required with default
   match_date: string;
   overs_per_innings: number;
   status: MatchStatus;
@@ -120,8 +131,8 @@ export interface CreateTournamentForm {
 
 export interface CreateMatchForm {
   tournament_id: string;
-  team_a_name: string;
-  team_b_name: string;
+  team_a_id: string;
+  team_b_id: string;
   match_date: string;
   overs_per_innings: number;
 }

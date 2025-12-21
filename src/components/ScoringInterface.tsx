@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
   recordBall,
   startNewOver,
@@ -89,6 +88,12 @@ interface ScoringInterfaceProps {
     wickets: number;
     economy: string;
   }[];
+  currentInningsExtras?: number | null;
+  firstInningsExtras?: number | null;
+  firstInningsRunRate?: string | null;
+  teamASummary?: { runs: number; wickets: number; overs: string } | null;
+  teamBSummary?: { runs: number; wickets: number; overs: string } | null;
+  matchResult?: string | null;
   readOnly?: boolean;
 }
 
@@ -102,7 +107,6 @@ export default function ScoringInterface({
   currentScore,
   currentWickets,
   ballsBowled,
-  maxOvers,
   existingPlayers,
   recentBalls,
   tossWinner,
@@ -115,9 +119,14 @@ export default function ScoringInterface({
   liveBowling,
   firstInningsBatting,
   firstInningsBowling,
+  currentInningsExtras,
+  firstInningsExtras,
+  firstInningsRunRate,
+  teamASummary,
+  teamBSummary,
+  matchResult,
   readOnly = false,
 }: ScoringInterfaceProps) {
-  const router = useRouter();
   // Get the latest ball to extract current players
   const latestBall = recentBalls[0];
   const latestOverId = latestBall?.over_id || "";
@@ -279,9 +288,13 @@ export default function ScoringInterface({
   }
 
   // A new over is needed whenever we've completed a multiple of 6 legal
-  // balls in the innings (and at least one over has been bowled).
+  // balls in the innings (and at least one over has been bowled), and we
+  // have NOT already created the next over locally.
   const needsNewOver =
-    !readOnly && totalLegalBalls > 0 && totalLegalBalls % 6 === 0;
+    !readOnly &&
+    totalLegalBalls > 0 &&
+    totalLegalBalls % 6 === 0 &&
+    !hasSetNewOver.current;
 
   // Get player names
   const strikerName =
@@ -363,11 +376,7 @@ export default function ScoringInterface({
         else if (addingPlayerFor === "keeper") setKeeperId(newPlayer.id);
         else if (addingPlayerFor === "fielder") setFielderId(newPlayer.id);
 
-        // Only reload for keeper/fielder (during wicket recording)
-        // For batsman/bowler, state update is enough
-        if (addingPlayerFor === "keeper" || addingPlayerFor === "fielder") {
-          router.refresh();
-        }
+        // No automatic page refresh here; local state is enough for scoring UI
 
         // If we just added a new bowler specifically for the next over,
         // start that over immediately with this new bowler.
@@ -438,12 +447,10 @@ export default function ScoringInterface({
     setIsDeletingLastBall(true);
     try {
       const result = await deleteLastBall(inningsId);
-      if (!result || (result as any).error) {
-        alert((result as any)?.error || "Error deleting last delivery");
+      if (!result || (result as { error?: string }).error) {
+        alert(result?.error || "Error deleting last delivery");
         return;
       }
-      // Refresh to reflect updated aggregates and over view
-      router.refresh();
     } catch (error) {
       alert("Error deleting last delivery: " + error);
     } finally {
@@ -459,8 +466,8 @@ export default function ScoringInterface({
 
     const result = await retireBatsman(inningsId, retirePlayerId, retireReason);
 
-    if ((result as any)?.error) {
-      alert((result as any).error);
+    if ((result as { error?: string })?.error) {
+      alert(result.error);
       return;
     }
 
@@ -478,8 +485,6 @@ export default function ScoringInterface({
     setShowRetireModal(false);
     setRetirePlayerId("");
     setRetireReason("");
-
-    router.refresh();
   };
 
   const handleChangeBowlerForOver = async () => {
@@ -489,15 +494,14 @@ export default function ScoringInterface({
     if (currentOverBalls.length === 0) {
       const result = await updateOverBowler(currentOverId, newBowlerForOverId);
 
-      if ((result as any)?.error) {
-        alert((result as any).error);
+      if ((result as { error?: string })?.error) {
+        alert(result.error);
         return;
       }
 
       setBowlerId(newBowlerForOverId);
       setShowChangeBowlerModal(false);
       setNewBowlerForOverId("");
-      router.refresh();
       return;
     }
 
@@ -521,10 +525,6 @@ export default function ScoringInterface({
       hasSetNewOver.current = true;
       setShowChangeBowlerModal(false);
       setNewBowlerForOverId("");
-
-      // Refresh and wait for server data to update
-      router.refresh();
-      await new Promise((resolve) => setTimeout(resolve, 150));
     } else {
       alert("Could not change bowler");
     }
@@ -532,6 +532,12 @@ export default function ScoringInterface({
 
   // Confirm new over after bowler selected
   const confirmNewOver = async () => {
+    console.log("confirmNewOver called", {
+      newOverBowlerId,
+      bowlerId,
+      ballsBowled,
+    });
+
     if (!newOverBowlerId) {
       alert("Please select a bowler");
       return;
@@ -546,7 +552,15 @@ export default function ScoringInterface({
     }
 
     const overNumber = Math.floor(ballsBowled / 6) + 1;
+    console.log("Starting new over", {
+      overNumber,
+      inningsId,
+      newOverBowlerId,
+    });
+
     const result = await startNewOver(inningsId, overNumber, newOverBowlerId);
+
+    console.log("startNewOver result:", result);
 
     if (result?.error) {
       alert(result.error);
@@ -554,6 +568,7 @@ export default function ScoringInterface({
     }
 
     if (result?.data) {
+      console.log("New over created successfully", result.data);
       setBowlerId(newOverBowlerId);
       setCurrentOverId(result.data.id);
       hasSetNewOver.current = true; // Mark that we've explicitly set a new over
@@ -570,20 +585,7 @@ export default function ScoringInterface({
     }
   };
 
-  // Open action modal for ball type selection
-  const openActionModal = (action: BallAction) => {
-    if (!strikerId || !nonStrikerId || !bowlerId) {
-      alert("Please select striker, non-striker, and bowler");
-      return;
-    }
-    if (needsNewOver && !currentOverId) {
-      alert("Please start a new over first");
-      return;
-    }
-    setCurrentAction(action);
-    setSelectedRuns(0);
-    setShowActionModal(true);
-  };
+  // (No helper needed here; main action modal is opened directly by the button.)
 
   // Record the ball
   const handleRecordBall = async (isWicket: boolean = false) => {
@@ -656,6 +658,8 @@ export default function ScoringInterface({
         // Handle innings end
         if (result.shouldEndInnings) {
           alert("Innings completed!");
+          // Prevent showing "Start Over" CTA after an innings has finished
+          hasSetNewOver.current = true;
         }
 
         // Reset modals
@@ -683,13 +687,14 @@ export default function ScoringInterface({
           }
         }
 
-        // Only refresh if not a wicket (wicket will prompt for new batsman)
-        if (!isWicket) {
-          if (currentAction === "noball" && typeof window !== "undefined") {
-            const key = `free_hit_${inningsId}`;
-            window.sessionStorage.setItem(key, "1");
-          }
-          router.refresh();
+        // Persist free hit flag client-side (no automatic page refresh)
+        if (
+          !isWicket &&
+          currentAction === "noball" &&
+          typeof window !== "undefined"
+        ) {
+          const key = `free_hit_${inningsId}`;
+          window.sessionStorage.setItem(key, "1");
         }
       }
     } catch (error) {
@@ -710,30 +715,80 @@ export default function ScoringInterface({
         }}
       >
         {/* Team Name and Score */}
-        <div className="flex items-baseline gap-3 mb-3">
-          <h2 className="text-base font-medium team-name">
-            {battingTeam === "A" ? teamAName : teamBName}
-          </h2>
-          <div className="flex items-baseline gap-2">
-            <span
-              className="text-4xl font-semibold"
-              style={{ color: "var(--foreground)" }}
-            >
-              {currentScore}/{currentWickets}
-            </span>
-            <span className="text-lg muted-text">
-              ({formatOvers(calculateOvers(ballsBowled))})
-            </span>
-          </div>
-        </div>
+        {readOnly && matchResult && teamASummary && teamBSummary ? (
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-medium team-name mb-1">
+                {teamAName}
+              </h2>
+              <div className="flex items-baseline gap-2">
+                <span
+                  className="text-2xl font-semibold"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  {teamASummary.runs}/{teamASummary.wickets}
+                </span>
+                <span className="text-sm muted-text">
+                  ({teamASummary.overs} ov)
+                </span>
+              </div>
+            </div>
 
-        {/* Toss Info */}
-        {tossWinner && tossDecision && (
-          <p className="text-xs muted-text mb-2">
-            {tossWinner === "A" ? teamAName : teamBName} won the toss and chose
-            to {tossDecision === "Bat" ? "bat" : "bowl"}.
-          </p>
+            <div className="text-right">
+              <h2 className="text-sm font-medium team-name mb-1">
+                {teamBName}
+              </h2>
+              <div className="flex items-baseline gap-2 justify-end">
+                <span
+                  className="text-2xl font-semibold"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  {teamBSummary.runs}/{teamBSummary.wickets}
+                </span>
+                <span className="text-sm muted-text">
+                  ({teamBSummary.overs} ov)
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-baseline gap-3 mb-3">
+            <h2 className="text-base font-medium team-name">
+              {battingTeam === "A" ? teamAName : teamBName}
+            </h2>
+            <div className="flex items-baseline gap-2">
+              <span
+                className="text-4xl font-semibold"
+                style={{ color: "var(--foreground)" }}
+              >
+                {currentScore}/{currentWickets}
+              </span>
+              <span className="text-lg muted-text">
+                ({formatOvers(calculateOvers(ballsBowled))})
+              </span>
+            </div>
+          </div>
         )}
+
+        {/* Toss Info & Match Result (centered under header) */}
+        {(tossWinner && tossDecision) || (readOnly && matchResult) ? (
+          <div className="mb-2 text-center">
+            {tossWinner && tossDecision && (
+              <p className="text-xs muted-text">
+                {tossWinner === "A" ? teamAName : teamBName} won the toss and
+                chose to {tossDecision === "Bat" ? "bat" : "bowl"}.
+              </p>
+            )}
+            {readOnly && matchResult && (
+              <p
+                className="text-sm"
+                style={{ color: "var(--success)", marginTop: "0.25rem" }}
+              >
+                {matchResult}
+              </p>
+            )}
+          </div>
+        ) : null}
 
         {/* Second Innings Target / Chase Info */}
         {isSecondInnings && targetRuns !== null && ballsRemaining !== null && (
@@ -743,18 +798,23 @@ export default function ScoringInterface({
           </p>
         )}
 
-        {/* Run Rates */}
-        <p className="text-xs muted-text mb-2">
-          CRR: {currentRunRateText}
-          {isSecondInnings &&
-            targetRuns !== null &&
-            ballsRemaining !== null && (
-              <span> · RRR: {requiredRunRateText}</span>
-            )}
-        </p>
+        {/* Run Rates - show during live play (no result yet) */}
+        {!matchResult && ballsBowled > 0 && (
+          <p className="text-xs muted-text mb-2">
+            CRR: {currentRunRateText}
+            {isSecondInnings &&
+              targetRuns !== null &&
+              ballsRemaining !== null && (
+                <span>
+                  {" | RRR: "}
+                  {requiredRunRateText}
+                </span>
+              )}
+          </p>
+        )}
 
-        {/* Batsmen Details */}
-        {strikerId && (
+        {/* Batsmen Details (scorer view only; hidden in read-only/public) */}
+        {!readOnly && strikerId && (
           <div className="space-y-1.5 mb-3 text-sm">
             <div className="flex justify-between">
               <span className="font-medium">{strikerName} *</span>
@@ -777,8 +837,8 @@ export default function ScoringInterface({
           </div>
         )}
 
-        {/* Bowler Details */}
-        {bowlerId && (
+        {/* Bowler Details (scorer view only; hidden in read-only/public) */}
+        {!readOnly && bowlerId && (
           <div
             className="pt-2 border-t text-sm"
             style={{ borderColor: "var(--border)" }}
@@ -794,55 +854,57 @@ export default function ScoringInterface({
           </div>
         )}
 
-        {/* Current Over Display */}
-        <div
-          className="mt-3 pt-3 border-t"
-          style={{ borderColor: "var(--border)" }}
-        >
-          <p className="text-xs muted-text mb-2">This Over:</p>
-          <div className="flex gap-2 flex-wrap">
-            {displayOverBalls.length === 0 ? (
-              <span className="text-sm muted-text">No balls yet</span>
-            ) : (
-              displayOverBalls.map((ball, idx) => (
-                <span
-                  key={idx}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
-                  style={{
-                    background:
-                      ball.wicket_type !== "None"
-                        ? "var(--danger)"
-                        : ball.runs_off_bat === 4 || ball.runs_off_bat === 6
-                        ? "var(--success)"
-                        : "var(--background)",
-                    color:
-                      ball.wicket_type !== "None" ||
-                      ball.runs_off_bat === 4 ||
-                      ball.runs_off_bat === 6
-                        ? "white"
-                        : "var(--foreground)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  {getBallDisplayText(
-                    ball.runs_off_bat,
-                    ball.extras_type,
-                    ball.extras_runs,
-                    ball.wicket_type
-                  )}
-                </span>
-              ))
+        {/* Current Over Display (hidden for completed/read-only result view) */}
+        {!(readOnly && matchResult) && (
+          <div
+            className="mt-3 pt-3 border-t"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <p className="text-xs muted-text mb-2">This Over:</p>
+            <div className="flex gap-2 flex-wrap">
+              {displayOverBalls.length === 0 ? (
+                <span className="text-sm muted-text">No balls yet</span>
+              ) : (
+                displayOverBalls.map((ball, idx) => (
+                  <span
+                    key={idx}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold"
+                    style={{
+                      background:
+                        ball.wicket_type !== "None"
+                          ? "var(--danger)"
+                          : ball.runs_off_bat === 4 || ball.runs_off_bat === 6
+                          ? "var(--success)"
+                          : "var(--background)",
+                      color:
+                        ball.wicket_type !== "None" ||
+                        ball.runs_off_bat === 4 ||
+                        ball.runs_off_bat === 6
+                          ? "white"
+                          : "var(--foreground)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    {getBallDisplayText(
+                      ball.runs_off_bat,
+                      ball.extras_type,
+                      ball.extras_runs,
+                      ball.wicket_type
+                    )}
+                  </span>
+                ))
+              )}
+            </div>
+            {isFreeHit && (
+              <p
+                className="text-xs font-medium mt-2"
+                style={{ color: "var(--danger)" }}
+              >
+                ⚠️ FREE HIT
+              </p>
             )}
           </div>
-          {isFreeHit && (
-            <p
-              className="text-xs font-medium mt-2"
-              style={{ color: "var(--danger)" }}
-            >
-              ⚠️ FREE HIT
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Collapsible Full Scorecard */}
@@ -987,6 +1049,26 @@ export default function ScoringInterface({
                     </div>
                   </div>
 
+                  {/* Innings Summary: Run Rate & Extras */}
+                  <div className="mt-3 text-[11px] sm:text-xs muted-text">
+                    <p>
+                      Run Rate:{" "}
+                      {activeScorecardTeam === battingTeam
+                        ? currentRunRateText
+                        : firstInningsRunRate || "-"}
+                    </p>
+                    {(activeScorecardTeam === battingTeam
+                      ? currentInningsExtras
+                      : firstInningsExtras) != null && (
+                      <p>
+                        Extras:{" "}
+                        {(activeScorecardTeam === battingTeam
+                          ? currentInningsExtras
+                          : firstInningsExtras) ?? 0}
+                      </p>
+                    )}
+                  </div>
+
                   {/* Separator */}
                   <div
                     className="border-t"
@@ -1056,8 +1138,8 @@ export default function ScoringInterface({
         )}
       </div>
 
-      {/* Player Selection - Only for scorers */}
-      {!readOnly && ((ballsBowled === 0 && !currentOverId) || !strikerId) && (
+      {/* Player Selection - Only for scorers at start */}
+      {!readOnly && ballsBowled === 0 && !currentOverId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div
             className="max-w-md w-full rounded-lg p-6"
