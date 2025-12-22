@@ -251,24 +251,24 @@ export async function updateMatchStatus(matchId: string, status: MatchStatus) {
   return { success: true };
 }
 
-export async function deleteMatch(formData: FormData) {
+export async function deleteMatch(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "Unauthorized" };
+    return;
   }
 
   const admin = await isAdmin();
   if (!admin) {
-    return { error: "Only admin can delete matches" };
+    return;
   }
 
   const matchId = formData.get("matchId") as string | null;
   if (!matchId) {
-    return { error: "Match ID is required" };
+    return;
   }
 
   const { data: match } = await supabase
@@ -282,7 +282,8 @@ export async function deleteMatch(formData: FormData) {
   const { error } = await supabase.from("matches").delete().eq("id", matchId);
 
   if (error) {
-    return { error: error.message };
+    console.error("Error deleting match", error.message);
+    return;
   }
 
   if (tournamentId) {
@@ -292,7 +293,7 @@ export async function deleteMatch(formData: FormData) {
   revalidatePath(`/match/${matchId}/score`);
   revalidatePath(`/match/${matchId}/setup`);
 
-  return { success: true };
+  return;
 }
 
 export async function addPlayers(players: CreatePlayerForm[]) {

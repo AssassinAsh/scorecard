@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getUser, logout } from "@/app/actions/auth";
-import LoginDialog from "@/components/LoginDialog";
+import LoginDialog from "./LoginDialog";
 
 export default async function AppHeader() {
   const user = await getUser();
