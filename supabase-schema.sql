@@ -94,6 +94,16 @@ created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Persistent team roster (reusable players per team)
+CREATE TABLE team_players (
+id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
+name TEXT NOT NULL,
+created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+UNIQUE(team_id, name)
+);
+
 -- Innings Table
 CREATE TABLE innings (
 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -151,6 +161,7 @@ CREATE INDEX idx_teams_tournament ON teams(tournament_id);
 CREATE INDEX idx_matches_tournament ON matches(tournament_id);
 CREATE INDEX idx_matches_status ON matches(status);
 CREATE INDEX idx_players_match ON players(match_id);
+CREATE INDEX idx_team_players_team ON team_players(team_id);
 CREATE INDEX idx_innings_match ON innings(match_id);
 CREATE INDEX idx_innings_match_completed ON innings(match_id, is_completed);
 CREATE INDEX idx_overs_innings ON overs(innings_id);
@@ -167,6 +178,7 @@ ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE innings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE overs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE balls ENABLE ROW LEVEL SECURITY;
@@ -214,6 +226,15 @@ USING (true);
 
 CREATE POLICY "Authenticated manage players"
 ON players FOR ALL
+USING (auth.role() = 'authenticated');
+
+-- Team players (persistent team rosters)
+CREATE POLICY "Public read team players"
+ON team_players FOR SELECT
+USING (true);
+
+CREATE POLICY "Authenticated manage team players"
+ON team_players FOR ALL
 USING (auth.role() = 'authenticated');
 
 -- Innings

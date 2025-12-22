@@ -59,7 +59,7 @@ export default async function MatchSetupPage({
 
       <main className="max-w-4xl mx-auto px-4 py-4">
         <div className="space-y-3">
-          {/* Pre-match and first innings setup */}
+          {/* Pre-match and first innings setup CTAs */}
           {!hasInnings && (
             <>
               {match.status === "Upcoming" && (
@@ -70,9 +70,12 @@ export default async function MatchSetupPage({
                     border: "1px solid var(--border)",
                   }}
                 >
-                  <h2 className="text-base font-medium mb-2">Record Toss</h2>
+                  <h2 className="text-base font-medium mb-2">
+                    Update Toss Decision
+                  </h2>
                   <p className="text-sm muted-text mb-4">
-                    Set the toss winner and decision before starting the match.
+                    Set or update the toss winner and decision before starting
+                    the match.
                   </p>
                   <TossForm
                     matchId={id}
@@ -93,7 +96,7 @@ export default async function MatchSetupPage({
                   }}
                 >
                   <h2 className="text-base font-medium mb-2">
-                    Start First Innings
+                    Start First Inning
                   </h2>
                   <p className="text-sm muted-text mb-4">
                     Choose which team will bat first and begin scoring.
@@ -121,7 +124,7 @@ export default async function MatchSetupPage({
                 }}
               >
                 <h2 className="text-base font-medium mb-2">
-                  Start Second Innings
+                  Start Second Inning
                 </h2>
                 <p className="text-sm muted-text mb-4">
                   {secondInningsBattingTeamName} will bat next.
@@ -134,30 +137,26 @@ export default async function MatchSetupPage({
               </div>
             )}
 
-          {/* Players Section intentionally removed to always direct scorers to the live scorecard */}
-
-          {/* Active Match (any ongoing innings) */}
-          {hasInnings && (
+          {/* Completed match CTA */}
+          {!hasInnings && match.status === "Completed" && (
             <div
-              className="rounded-lg p-6 text-center"
+              className="rounded-lg p-6"
               style={{
-                background:
-                  "color-mix(in srgb, var(--accent) 10%, transparent)",
-                border: "1px solid var(--accent)",
+                background: "var(--card-bg)",
+                border: "1px solid var(--border)",
               }}
             >
-              <h3
-                className="text-base font-medium mb-3"
-                style={{ color: "var(--accent)" }}
-              >
-                Match is {match.status}!
-              </h3>
+              <h2 className="text-base font-medium mb-2">Update Info</h2>
+              <p className="text-sm muted-text mb-4">
+                Match is completed. Detailed result editing will be available
+                here. For now you can review the full scorecard.
+              </p>
               <Link
-                href={`/match/${id}/score`}
-                className="inline-block px-6 py-3 rounded-md font-medium text-white"
+                href={`/match/${id}`}
+                className="inline-block px-4 py-2 rounded-md text-sm font-medium text-white"
                 style={{ background: "var(--accent)" }}
               >
-                Go to Scoring →
+                View Scorecard
               </Link>
             </div>
           )}

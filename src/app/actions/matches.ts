@@ -39,6 +39,57 @@ export async function createMatch(formData: CreateMatchForm) {
     return { error: error.message };
   }
 
+  // Auto-populate match players from persistent team rosters (team_players)
+  try {
+    const { data: roster } = await supabase
+      .from("team_players")
+      .select("id, team_id, name")
+      .in("team_id", [formData.team_a_id, formData.team_b_id]);
+
+    if (roster && roster.length > 0) {
+      const teamAPlayers = roster
+        .filter((p: any) => p.team_id === formData.team_a_id)
+        .slice(0, 11);
+      const teamBPlayers = roster
+        .filter((p: any) => p.team_id === formData.team_b_id)
+        .slice(0, 11);
+
+      const newPlayers: {
+        match_id: string;
+        team: "A" | "B";
+        name: string;
+        batting_order: number;
+      }[] = [];
+
+      teamAPlayers.forEach((p: any, index: number) => {
+        newPlayers.push({
+          match_id: data.id,
+          team: "A",
+          name: p.name,
+          batting_order: index + 1,
+        });
+      });
+
+      teamBPlayers.forEach((p: any, index: number) => {
+        newPlayers.push({
+          match_id: data.id,
+          team: "B",
+          name: p.name,
+          batting_order: index + 1,
+        });
+      });
+
+      if (newPlayers.length > 0) {
+        await supabase.from("players").insert(newPlayers);
+      }
+    }
+  } catch (rosterError) {
+    console.error(
+      "Error pre-populating match players from team roster:",
+      rosterError
+    );
+  }
+
   // Refresh the public tournament and match pages
   revalidatePath(`/tournament/${formData.tournament_id}`);
   revalidatePath(`/match/${data.id}`);
@@ -215,6 +266,38 @@ export async function addPlayers(players: CreatePlayerForm[]) {
     return { error: error.message };
   }
 
+  // Also persist these player names to the team roster so
+  // they can be reused in future matches.
+  try {
+    if (players.length > 0) {
+      const matchId = players[0].match_id;
+      const { data: match } = await supabase
+        .from("matches")
+        .select("team_a_id, team_b_id")
+        .eq("id", matchId)
+        .single();
+
+      if (match) {
+        const rosterInserts = players.map((p) => {
+          const teamId =
+            p.team === "A"
+              ? (match as any).team_a_id
+              : (match as any).team_b_id;
+          return {
+            team_id: teamId,
+            name: p.name.trim(),
+          };
+        });
+
+        await supabase.from("team_players").upsert(rosterInserts, {
+          onConflict: "team_id,name",
+        });
+      }
+    }
+  } catch (rosterError) {
+    console.error("Error updating team roster from addPlayers:", rosterError);
+  }
+
   if (players.length > 0) {
     revalidatePath(`/match/${players[0].match_id}`);
     revalidatePath(`/match/${players[0].match_id}/setup`);
@@ -267,6 +350,35 @@ export async function createPlayer(
   if (error) {
     console.error("Error creating player:", error);
     return { data: null, error: error.message };
+  }
+
+  // Also persist this player in the team roster so their
+  // name can be reused in future matches for the same team.
+  try {
+    const { data: match } = await supabase
+      .from("matches")
+      .select("team_a_id, team_b_id")
+      .eq("id", matchId)
+      .single();
+
+    if (match) {
+      const teamId =
+        player.team === "A"
+          ? (match as any).team_a_id
+          : (match as any).team_b_id;
+
+      if (teamId) {
+        await supabase.from("team_players").upsert(
+          {
+            team_id: teamId,
+            name: player.name.trim(),
+          },
+          { onConflict: "team_id,name" }
+        );
+      }
+    }
+  } catch (rosterError) {
+    console.error("Error updating team roster from createPlayer:", rosterError);
   }
 
   revalidatePath(`/match/${matchId}`);

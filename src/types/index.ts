@@ -38,6 +38,14 @@ export interface TeamInfo {
   updated_at: string;
 }
 
+export interface TeamPlayer {
+  id: string;
+  team_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Match {
   id: string;
   tournament_id: string;

@@ -1,9 +1,19 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getTournaments, isAdmin } from "./actions/tournaments";
 import { getUser, logout } from "./actions/auth";
 import NewTournamentButton from "@/components/NewTournamentButton";
+import { RootSkeleton } from "@/components/Skeletons";
 
-export default async function Home() {
+export default function Home() {
+  return (
+    <Suspense fallback={<RootSkeleton />}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+async function HomeContent() {
   const tournaments = await getTournaments();
   const user = await getUser();
   const admin = user ? await isAdmin() : false;

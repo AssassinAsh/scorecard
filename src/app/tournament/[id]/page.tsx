@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getTournamentById, hasAccess } from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { createClient } from "@/lib/supabase/server";
@@ -6,8 +7,19 @@ import DashboardMatchCard from "@/components/DashboardMatchCard";
 import Footer from "@/components/Footer";
 import NewMatchButton from "@/components/NewMatchButton";
 import { notFound } from "next/navigation";
+import { TournamentSkeleton } from "@/components/Skeletons";
 
-export default async function TournamentPage({
+export default function TournamentPage(props: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<TournamentSkeleton />}>
+      <TournamentPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function TournamentPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;

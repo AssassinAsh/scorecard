@@ -66,7 +66,7 @@ export default function BallActionModal({
               onClick={() => {
                 onSelectAction("wicket");
               }}
-              disabled={isRecording || isFreeHit}
+              disabled={isRecording}
               className="py-4 rounded-md text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: "var(--danger)",
@@ -75,7 +75,9 @@ export default function BallActionModal({
             >
               Wicket
               {isFreeHit && (
-                <div className="text-xs font-normal mt-1">(Free Hit)</div>
+                <div className="text-xs font-normal mt-1">
+                  (Free Hit – only Run Out allowed)
+                </div>
               )}
             </button>
             <button

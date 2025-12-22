@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import {
@@ -22,6 +23,7 @@ import ScoringInterface from "@/components/ScoringInterface";
 import AutoRefresh from "@/components/AutoRefresh";
 import InningsButton from "@/components/InningsButton";
 import { hasAccess } from "@/app/actions/tournaments";
+import { MatchSkeleton } from "@/components/Skeletons";
 
 type LiveBattingRow = {
   playerId: string;
@@ -45,7 +47,15 @@ type LiveBowlingRow = {
   economy: string;
 };
 
-export default async function MatchPage({
+export default function MatchPage(props: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<MatchSkeleton />}>
+      <MatchPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function MatchPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;

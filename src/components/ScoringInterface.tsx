@@ -585,6 +585,14 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         runs = 0;
       }
 
+      // For Run Out, treat the selected runs as total runs taken
+      // so they are included in the score.
+      if (isWicket && wicketType === "RunOut") {
+        runs = selectedRuns;
+        extrasType = "None";
+        extrasRuns = 0;
+      }
+
       const ballData = {
         over_id: currentOverId,
         ball_number: legalBallsInCurrentSegment + 1,
@@ -613,8 +621,14 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         // Handle strike rotation
         let shouldRotate = result.rotateStrike;
 
+        // Ensure rotation logic is robust on the client side
         // Special case: Wide with odd runs should rotate strike
         if (currentAction === "wide" && selectedRuns % 2 === 1) {
+          shouldRotate = true;
+        }
+
+        // For normal runs, rotate on odd runs as a safety net
+        if (currentAction === "runs" && selectedRuns % 2 === 1) {
           shouldRotate = true;
         }
 
@@ -663,6 +677,7 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         ) {
           const key = `free_hit_${inningsId}`;
           window.sessionStorage.setItem(key, "1");
+          setIsFreeHit(true);
         }
       }
     } catch (error) {
@@ -824,6 +839,7 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
           runOutBatsmanId={runOutBatsmanId}
           selectedRuns={selectedRuns}
           isRecording={isRecording}
+          isFreeHit={isFreeHit}
           fieldingPlayers={fieldingPlayers}
           strikerName={strikerName}
           nonStrikerName={nonStrikerName}
