@@ -125,34 +125,6 @@ async function TournamentPageContent({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      {/* Sticky Header */}
-      <header
-        className="sticky top-0 z-10 border-b"
-        style={{
-          background: "var(--card-bg)",
-          borderColor: "var(--border)",
-        }}
-      >
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <Link
-            href="/"
-            className="text-sm hover:underline mb-2 inline-block"
-            style={{ color: "var(--accent)" }}
-          >
-            ← {user ? "Dashboard" : "All Tournaments"}
-          </Link>
-          <h1 className="text-lg sm:text-xl font-medium">{tournament.name}</h1>
-          <p className="text-sm mt-1 muted-text">
-            {tournament.location} •{" "}
-            {new Date(tournament.start_date).toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-      </header>
-
       {/* Spectator Mode Banner */}
       {user && !hasScorerAccess && (
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -166,6 +138,19 @@ async function TournamentPageContent({
       )}
 
       <main className="max-w-4xl mx-auto px-4 py-4">
+        <div className="mb-4">
+          <h1 className="text-lg sm:text-xl font-medium team-name">
+            {tournament.name}
+          </h1>
+          <p className="text-sm mt-1 muted-text">
+            {tournament.location} •{" "}
+            {new Date(tournament.start_date).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </p>
+        </div>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-base font-medium px-2">Matches</h2>
           {hasScorerAccess && <NewMatchButton tournamentId={id} />}
