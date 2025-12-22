@@ -642,13 +642,6 @@ export default async function ScoringPage({
         }}
       >
         <div className="max-w-4xl mx-auto px-4 py-3">
-          <Link
-            href={`/match/${id}/setup`}
-            className="text-sm hover:underline mb-2 inline-block"
-            style={{ color: "var(--accent)" }}
-          >
-            ← Setup
-          </Link>
           <div className="flex items-center justify-between">
             <h1 className="text-lg sm:text-xl font-medium">
               {match.team_a_name} vs {match.team_b_name}
@@ -767,14 +760,14 @@ export default async function ScoringPage({
             }}
           >
             <p className="muted-text mb-4">
-              No active innings. Start the match from the setup page.
+              No active innings. Start the match from the match page.
             </p>
             <Link
-              href={`/match/${id}/setup`}
+              href={`/match/${id}`}
               className="inline-block px-4 py-2 rounded-md text-sm font-medium text-white"
               style={{ background: "var(--accent)" }}
             >
-              Go to Setup
+              Go to Match
             </Link>
           </div>
         )}

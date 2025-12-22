@@ -95,7 +95,7 @@ export async function createMatch(formData: CreateMatchForm) {
   // Refresh the public tournament and match pages
   revalidatePath(`/tournament/${formData.tournament_id}`);
   revalidatePath(`/match/${data.id}`);
-  redirect(`/match/${data.id}/setup`);
+  redirect(`/match/${data.id}`);
 }
 
 export async function getMatchesByTournament(tournamentId: string) {
@@ -293,12 +293,11 @@ export async function deleteMatch(formData: FormData): Promise<void> {
 
   if (tournamentId) {
     revalidatePath(`/tournament/${tournamentId}`);
+    redirect(`/tournament/${tournamentId}`);
   }
-  revalidatePath(`/match/${matchId}`);
-  revalidatePath(`/match/${matchId}/score`);
-  revalidatePath(`/match/${matchId}/setup`);
 
-  return;
+  // If no tournament ID, redirect to home
+  redirect("/");
 }
 
 export async function addPlayers(players: CreatePlayerForm[]) {
@@ -351,7 +350,6 @@ export async function addPlayers(players: CreatePlayerForm[]) {
 
   if (players.length > 0) {
     revalidatePath(`/match/${players[0].match_id}`);
-    revalidatePath(`/match/${players[0].match_id}/setup`);
   }
 
   return { success: true };
@@ -433,7 +431,6 @@ export async function createPlayer(
   }
 
   revalidatePath(`/match/${matchId}`);
-  revalidatePath(`/match/${matchId}/setup`);
   return { data };
 }
 

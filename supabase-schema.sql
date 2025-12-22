@@ -139,7 +139,7 @@ CREATE TABLE overs (
 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 innings_id UUID REFERENCES innings(id) ON DELETE CASCADE NOT NULL,
 over_number INTEGER NOT NULL CHECK (over_number >= 1),
-bowler_id UUID REFERENCES players(id),
+bowler_id UUID REFERENCES players(id) ON DELETE SET NULL,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -148,15 +148,15 @@ CREATE TABLE balls (
 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 over_id UUID REFERENCES overs(id) ON DELETE CASCADE NOT NULL,
 ball_number INTEGER NOT NULL CHECK (ball_number BETWEEN 0 AND 6),
-striker_id UUID REFERENCES players(id) NOT NULL,
-non_striker_id UUID REFERENCES players(id) NOT NULL,
+striker_id UUID REFERENCES players(id) ON DELETE CASCADE NOT NULL,
+non_striker_id UUID REFERENCES players(id) ON DELETE CASCADE NOT NULL,
 runs_off_bat INTEGER NOT NULL DEFAULT 0 CHECK (runs_off_bat BETWEEN 0 AND 6),
 extras_type extras_type NOT NULL DEFAULT 'None',
 extras_runs INTEGER NOT NULL DEFAULT 0 CHECK (extras_runs BETWEEN 0 AND 6),
 wicket_type wicket_type NOT NULL DEFAULT 'None',
-dismissed_player_id UUID REFERENCES players(id),
-fielder_id UUID REFERENCES players(id),
-keeper_id UUID REFERENCES players(id),
+dismissed_player_id UUID REFERENCES players(id) ON DELETE CASCADE,
+fielder_id UUID REFERENCES players(id) ON DELETE CASCADE,
+keeper_id UUID REFERENCES players(id) ON DELETE CASCADE,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

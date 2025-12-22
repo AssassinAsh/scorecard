@@ -78,7 +78,7 @@ export default function DashboardMatchCard({
       case "Innings Break":
         return {
           label: "Start Second Innings",
-          action: () => router.push(`/match/${match.id}/setup`),
+          action: () => router.push(`/match/${match.id}/score`),
         };
       case "Completed":
         return {

@@ -651,17 +651,7 @@ async function MatchPageContent({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      <div style={{ background: "var(--card-bg)" }}>
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          <Link
-            href={`/tournament/${match.tournament_id}`}
-            className="text-sm hover:underline mb-2 inline-block"
-            style={{ color: "var(--accent)" }}
-          >
-            ← Back to Tournament
-          </Link>
-        </div>
-      </div>
+      <div style={{ background: "var(--card-bg)" }}></div>
 
       <MatchHeader
         match={{
@@ -682,6 +672,8 @@ async function MatchPageContent({
         showScorerActions={hasScorerAccess && match.status !== "Completed"}
         hasTossData={Boolean(match.toss_winner_id)}
         hasPlayers={players.length > 0}
+        tossWinner={match.toss_winner}
+        tossDecision={match.toss_decision}
       />
 
       <main className="max-w-4xl mx-auto px-4 py-4">

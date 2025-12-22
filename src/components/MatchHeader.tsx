@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import TeamEditDialog from "./TeamEditDialog";
+import TossDialog from "./TossDialog";
+import type { TeamSide, TossDecision } from "@/types";
 
 interface MatchHeaderProps {
   match: {
@@ -23,6 +25,8 @@ interface MatchHeaderProps {
   showScorerActions: boolean;
   hasTossData: boolean;
   hasPlayers: boolean;
+  tossWinner: TeamSide | null;
+  tossDecision: TossDecision | null;
 }
 
 export default function MatchHeader({
@@ -31,8 +35,11 @@ export default function MatchHeader({
   showScorerActions,
   hasTossData,
   hasPlayers,
+  tossWinner,
+  tossDecision,
 }: MatchHeaderProps) {
   const [editingTeam, setEditingTeam] = useState<"A" | "B" | null>(null);
+  const [showTossDialog, setShowTossDialog] = useState(false);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
@@ -102,27 +109,18 @@ export default function MatchHeader({
             </div>
           </div>
 
-          {showScorerActions && (
-            <div className="flex items-center gap-2 mt-3 text-xs">
-              {!hasTossData && (
-                <Link
-                  href={`/match/${match.id}/setup`}
-                  className="px-3 py-1.5 rounded-md font-medium text-white"
-                  style={{ background: "var(--accent)" }}
-                >
-                  Complete Toss
-                </Link>
-              )}
-              {!hasPlayers && (
-                <Link
-                  href={`/match/${match.id}/setup`}
-                  className="px-3 py-1.5 rounded-md font-medium text-white"
-                  style={{ background: "var(--accent)" }}
-                >
-                  Add Players
-                </Link>
-              )}
-              {hasTossData && hasPlayers && (
+          <div className="flex items-center gap-2 mt-3 text-xs">
+            {showScorerActions && match.status === "Upcoming" && (
+              <button
+                onClick={() => setShowTossDialog(true)}
+                className="px-3 py-1.5 rounded-md font-medium text-white"
+                style={{ background: "var(--accent)" }}
+              >
+                {hasTossData ? "Update Toss" : "Complete Toss"}
+              </button>
+            )}
+            {showScorerActions &&
+              (match.status === "Live" || match.status === "Innings Break") && (
                 <Link
                   href={`/match/${match.id}/score`}
                   className="px-3 py-1.5 rounded-md font-medium text-white"
@@ -131,8 +129,22 @@ export default function MatchHeader({
                   Live Scoring
                 </Link>
               )}
-            </div>
-          )}
+            {(match.status === "Live" ||
+              match.status === "Innings Break" ||
+              match.status === "Completed") && (
+              <Link
+                href={`/match/${match.id}/display`}
+                className="px-3 py-1.5 rounded-md font-medium"
+                style={{
+                  background: "rgba(59, 130, 246, 0.1)",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  color: "var(--accent)",
+                }}
+              >
+                ⛶ Full Screen
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
@@ -159,6 +171,16 @@ export default function MatchHeader({
           tournamentId={match.tournament_id}
         />
       )}
+
+      <TossDialog
+        isOpen={showTossDialog}
+        onClose={() => setShowTossDialog(false)}
+        matchId={match.id}
+        teamAName={match.team_a_name}
+        teamBName={match.team_b_name}
+        existingWinner={tossWinner}
+        existingDecision={tossDecision}
+      />
     </>
   );
 }
