@@ -43,7 +43,7 @@ export default function InningsButton({
 
       if (result?.data) {
         // Redirect to scoring page
-        router.push(`/dashboard/match/${matchId}/score`);
+        router.push(`/match/${matchId}/score`);
       } else {
         alert("Failed to start innings");
         setIsStarting(false);
@@ -66,7 +66,7 @@ export default function InningsButton({
         return;
       }
 
-      router.push(`/dashboard/match/${matchId}/score`);
+      router.push(`/match/${matchId}/score`);
     } catch (error) {
       alert("Error starting second innings: " + error);
       setIsStarting(false);

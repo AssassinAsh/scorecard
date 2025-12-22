@@ -36,8 +36,8 @@ export async function createTournament(formData: CreateTournamentForm) {
     return { error: error.message };
   }
 
-  revalidatePath("/dashboard");
-  redirect(`/dashboard/tournament/${data.id}`);
+  revalidatePath("/");
+  redirect(`/tournament/${data.id}`);
 }
 
 export async function isAdmin() {

@@ -43,7 +43,8 @@ export async function startInnings(
     return { error: error.message };
   }
 
-  revalidatePath(`/dashboard/match/${matchId}`);
+  revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/score`);
   return { data };
 }
 
@@ -105,8 +106,8 @@ export async function startSecondInnings(matchId: string) {
   // Mark match as live again for the chase
   await supabase.from("matches").update({ status: "Live" }).eq("id", matchId);
 
-  revalidatePath(`/dashboard/match/${matchId}`);
-  revalidatePath(`/dashboard/match/${matchId}/score`);
+  revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/score`);
   return { data };
 }
 
@@ -147,7 +148,7 @@ export async function startNewOver(
 
   if (innings) {
     revalidatePath(`/match/${innings.match_id}`);
-    revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+    revalidatePath(`/match/${innings.match_id}/score`);
   }
 
   return { data };
@@ -244,7 +245,7 @@ export async function recordBall(ballData: CreateBallForm) {
           .eq("id", innings.match_id);
 
         revalidatePath(`/match/${innings.match_id}`);
-        revalidatePath(`/dashboard/match/${innings.match_id}`);
+        revalidatePath(`/match/${innings.match_id}/score`);
       }
     } else {
       // Otherwise we're in a chase scenario (second innings)
@@ -313,7 +314,7 @@ export async function recordBall(ballData: CreateBallForm) {
     ballData.extras_runs
   );
 
-  revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+  revalidatePath(`/match/${innings.match_id}/score`);
 
   return {
     data: ball,
@@ -482,7 +483,7 @@ export async function retireBatsman(
 
   if (innings) {
     revalidatePath(`/match/${innings.match_id}`);
-    revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+    revalidatePath(`/match/${innings.match_id}/score`);
   }
 
   return { success: true };
@@ -518,7 +519,7 @@ export async function updateOverBowler(overId: string, bowlerId: string) {
 
   if (innings) {
     revalidatePath(`/match/${innings.match_id}`);
-    revalidatePath(`/dashboard/match/${innings.match_id}/score`);
+    revalidatePath(`/match/${innings.match_id}/score`);
   }
 
   return { success: true };
@@ -705,8 +706,7 @@ export async function deleteLastBall(inningsId: string) {
     }
   }
 
-  revalidatePath(`/dashboard/match/${innings.match_id}/score`);
-  revalidatePath(`/dashboard/match/${innings.match_id}`);
+  revalidatePath(`/match/${innings.match_id}/score`);
   revalidatePath(`/match/${innings.match_id}`);
 
   return { success: true };

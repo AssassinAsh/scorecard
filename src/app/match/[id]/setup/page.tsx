@@ -3,6 +3,7 @@ import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import { getCurrentInnings, getAllInnings } from "@/app/actions/scoring";
 import { notFound } from "next/navigation";
 import InningsButton from "@/components/InningsButton";
+import TossForm from "@/components/TossForm";
 
 export default async function MatchSetupPage({
   params,
@@ -43,7 +44,7 @@ export default async function MatchSetupPage({
       >
         <div className="max-w-4xl mx-auto px-4 py-3">
           <Link
-            href={`/dashboard/tournament/${match.tournament_id}`}
+            href={`/tournament/${match.tournament_id}`}
             className="text-sm hover:underline mb-2 inline-block"
             style={{ color: "var(--accent)" }}
           >
@@ -58,6 +59,56 @@ export default async function MatchSetupPage({
 
       <main className="max-w-4xl mx-auto px-4 py-4">
         <div className="space-y-3">
+          {/* Pre-match and first innings setup */}
+          {!hasInnings && (
+            <>
+              {match.status === "Upcoming" && (
+                <div
+                  className="rounded-lg p-6"
+                  style={{
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <h2 className="text-base font-medium mb-2">Record Toss</h2>
+                  <p className="text-sm muted-text mb-4">
+                    Set the toss winner and decision before starting the match.
+                  </p>
+                  <TossForm
+                    matchId={id}
+                    teamAName={match.team_a_name}
+                    teamBName={match.team_b_name}
+                    existingWinner={match.toss_winner}
+                    existingDecision={match.toss_decision}
+                  />
+                </div>
+              )}
+
+              {match.status === "Starting Soon" && (
+                <div
+                  className="rounded-lg p-6"
+                  style={{
+                    background: "var(--card-bg)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <h2 className="text-base font-medium mb-2">
+                    Start First Innings
+                  </h2>
+                  <p className="text-sm muted-text mb-4">
+                    Choose which team will bat first and begin scoring.
+                  </p>
+                  <InningsButton
+                    matchId={id}
+                    inningsNumber={1}
+                    teamAName={match.team_a_name}
+                    teamBName={match.team_b_name}
+                  />
+                </div>
+              )}
+            </>
+          )}
+
           {/* Start Second Innings Section */}
           {!hasInnings &&
             completedInnings.length === 1 &&
@@ -102,7 +153,7 @@ export default async function MatchSetupPage({
                 Match is {match.status}!
               </h3>
               <Link
-                href={`/dashboard/match/${id}/score`}
+                href={`/match/${id}/score`}
                 className="inline-block px-6 py-3 rounded-md font-medium text-white"
                 style={{ background: "var(--accent)" }}
               >

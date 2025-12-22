@@ -49,7 +49,7 @@ export default function DashboardMatchCard({
         return;
       }
 
-      router.push(`/dashboard/match/${match.id}/score`);
+      router.push(`/match/${match.id}/score`);
     } catch (error) {
       alert("Error starting match: " + error);
       setIsStartingFirstInnings(false);
@@ -71,12 +71,12 @@ export default function DashboardMatchCard({
       case "Live":
         return {
           label: "Score Live",
-          action: () => router.push(`/dashboard/match/${match.id}/score`),
+          action: () => router.push(`/match/${match.id}/score`),
         };
       case "Innings Break":
         return {
           label: "Start Second Innings",
-          action: () => router.push(`/dashboard/match/${match.id}/setup`),
+          action: () => router.push(`/match/${match.id}/setup`),
         };
       case "Completed":
         return {
@@ -134,10 +134,7 @@ export default function DashboardMatchCard({
       }}
     >
       <div className="flex justify-between items-start gap-3 mb-2">
-        <Link
-          href={`/dashboard/match/${match.id}/score`}
-          className="flex-1 min-w-0"
-        >
+        <Link href={`/match/${match.id}`} className="flex-1 min-w-0">
           <h3 className="text-base sm:text-lg font-medium team-name truncate">
             {match.team_a_name} vs {match.team_b_name}
           </h3>

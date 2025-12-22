@@ -1,15 +1,21 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useState, useEffect, useCallback } from "react";
 import { createMatch } from "@/app/actions/matches";
 import { getTeamsByTournament, createTeam } from "@/app/actions/teams";
 import type { TeamInfo } from "@/types";
 
-function NewMatchForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+interface NewMatchDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  tournamentId: string;
+}
+
+export default function NewMatchDialog({
+  isOpen,
+  onClose,
+  tournamentId,
+}: NewMatchDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [teams, setTeams] = useState<TeamInfo[]>([]);
@@ -22,27 +28,21 @@ function NewMatchForm() {
   const [selectedTeamA, setSelectedTeamA] = useState("");
   const [selectedTeamB, setSelectedTeamB] = useState("");
 
-  const tournamentId = searchParams.get("tournament_id");
-
-  useEffect(() => {
-    if (!tournamentId) {
-      router.push("/dashboard");
-      return;
-    }
-
-    loadTeams();
-  }, [tournamentId, router]);
-
-  async function loadTeams() {
-    if (!tournamentId) return;
+  const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
     const data = await getTeamsByTournament(tournamentId);
     setTeams(data);
     setLoadingTeams(false);
-  }
+  }, [tournamentId]);
+
+  useEffect(() => {
+    if (isOpen && tournamentId) {
+      loadTeams();
+    }
+  }, [isOpen, tournamentId, loadTeams]);
 
   async function handleCreateNewTeam(forTeamA: boolean) {
-    if (!newTeamName.trim() || !tournamentId) return;
+    if (!newTeamName.trim()) return;
 
     setSavingNewTeam(true);
     const result = await createTeam({
@@ -58,10 +58,8 @@ function NewMatchForm() {
     }
 
     if (result.team) {
-      // Refresh teams list
       await loadTeams();
 
-      // Select the newly created team
       if (forTeamA) {
         setSelectedTeamA(result.team.id);
         setShowTeamAModal(false);
@@ -70,7 +68,6 @@ function NewMatchForm() {
         setShowTeamBModal(false);
       }
 
-      // Reset form
       setNewTeamName("");
       setNewTeamContact("");
     }
@@ -86,7 +83,7 @@ function NewMatchForm() {
     const formData = new FormData(e.currentTarget);
 
     const result = await createMatch({
-      tournament_id: tournamentId!,
+      tournament_id: tournamentId,
       team_a_id: formData.get("team_a_id") as string,
       team_b_id: formData.get("team_b_id") as string,
       match_date: formData.get("match_date") as string,
@@ -96,218 +93,30 @@ function NewMatchForm() {
     if (result?.error) {
       setError(result.error);
       setLoading(false);
+    } else {
+      onClose();
     }
-    // Success case will redirect automatically
   }
 
-  if (!tournamentId) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      <header
-        className="shadow-sm border-b"
-        style={{
-          background: "var(--card-bg)",
-          borderColor: "var(--border)",
-        }}
-      >
-        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <Link
-            href={`/dashboard/tournament/${tournamentId}`}
-            className="mb-2 inline-block text-sm hover:underline"
-            style={{ color: "var(--accent)" }}
-          >
-            ← Back to Tournament
-          </Link>
-          <h1 className="text-lg sm:text-xl font-medium">Create New Match</h1>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-        <div
-          className="rounded-lg p-6"
-          style={{
-            background: "var(--card-bg)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Team A Selection */}
-            <div>
-              <label
-                htmlFor="team_a_id"
-                className="block text-sm font-medium mb-1"
-                style={{ color: "var(--muted)" }}
-              >
-                Team A *
-              </label>
-              <div className="flex gap-2">
-                <select
-                  id="team_a_id"
-                  name="team_a_id"
-                  required
-                  value={selectedTeamA}
-                  onChange={(e) => setSelectedTeamA(e.target.value)}
-                  disabled={loadingTeams}
-                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                  style={{
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  <option value="">
-                    {loadingTeams ? "Loading teams..." : "Select Team A"}
-                  </option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowTeamAModal(true)}
-                  className="px-4 py-2 rounded-md text-sm font-medium text-white"
-                  style={{ background: "var(--accent)" }}
-                >
-                  + New
-                </button>
-              </div>
-            </div>
-
-            {/* Team B Selection */}
-            <div>
-              <label
-                htmlFor="team_b_id"
-                className="block text-sm font-medium mb-1"
-                style={{ color: "var(--muted)" }}
-              >
-                Team B *
-              </label>
-              <div className="flex gap-2">
-                <select
-                  id="team_b_id"
-                  name="team_b_id"
-                  required
-                  value={selectedTeamB}
-                  onChange={(e) => setSelectedTeamB(e.target.value)}
-                  disabled={loadingTeams}
-                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                  style={{
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  <option value="">
-                    {loadingTeams ? "Loading teams..." : "Select Team B"}
-                  </option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setShowTeamBModal(true)}
-                  className="px-4 py-2 rounded-md text-sm font-medium text-white"
-                  style={{ background: "var(--accent)" }}
-                >
-                  + New
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="match_date"
-                className="block text-sm font-medium mb-1"
-                style={{ color: "var(--muted)" }}
-              >
-                Match Date *
-              </label>
-              <input
-                id="match_date"
-                name="match_date"
-                type="date"
-                required
-                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="overs_per_innings"
-                className="block text-sm font-medium mb-1"
-                style={{ color: "var(--muted)" }}
-              >
-                Overs Per Innings * (1-10)
-              </label>
-              <input
-                id="overs_per_innings"
-                name="overs_per_innings"
-                type="number"
-                min="1"
-                max="10"
-                required
-                defaultValue="6"
-                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-                placeholder="5"
-              />
-            </div>
-
-            {error && (
-              <div
-                className="rounded-md p-3 text-sm"
-                style={{
-                  background:
-                    "color-mix(in srgb, var(--danger) 10%, transparent)",
-                  border: "1px solid var(--danger)",
-                  color: "var(--danger)",
-                }}
-              >
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-white"
-              style={{ background: "var(--accent)" }}
-            >
-              {loading ? "Creating..." : "Create Match"}
-            </button>
-          </form>
-        </div>
-      </main>
-
-      {/* Add Team Modal */}
+    <>
+      {/* Add Team Modal - Render first with higher z-index */}
       {(showTeamAModal || showTeamBModal) && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ background: "rgba(0, 0, 0, 0.5)" }}
-          onClick={() => {
-            setShowTeamAModal(false);
-            setShowTeamBModal(false);
+          className="fixed inset-0 flex items-center justify-center z-[70]"
+          style={{ background: "rgba(0, 0, 0, 0.7)" }}
+          onClick={(e) => {
+            // Only close when clicking on the backdrop itself
+            if (e.target === e.currentTarget) {
+              setShowTeamAModal(false);
+              setShowTeamBModal(false);
+            }
           }}
         >
           <div
-            className="rounded-lg p-6 w-full max-w-md"
+            className="rounded-lg p-6 w-full max-w-md mx-4"
             style={{
               background: "var(--card-bg)",
               border: "1px solid var(--border)",
@@ -394,26 +203,211 @@ function NewMatchForm() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-export default function NewMatchPage() {
-  return (
-    <Suspense
-      fallback={
+      {/* Main Match Dialog */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+        style={{ background: "rgba(0, 0, 0, 0.5)" }}
+        onClick={(e) => {
+          // Only close if clicking the backdrop, not the dialog
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
         <div
-          className="min-h-screen flex items-center justify-center"
+          className="rounded-lg p-6 w-full max-w-md my-8"
           style={{
-            background: "var(--background)",
-            color: "var(--foreground)",
+            background: "var(--card-bg)",
+            border: "1px solid var(--border)",
           }}
+          onClick={(e) => e.stopPropagation()}
         >
-          Loading...
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Create New Match</h2>
+            <button
+              onClick={onClose}
+              className="text-2xl leading-none"
+              style={{ color: "var(--muted)" }}
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Team A Selection */}
+            <div>
+              <label
+                htmlFor="team_a_id"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
+              >
+                Team A *
+              </label>
+              <div className="flex gap-2">
+                <select
+                  id="team_a_id"
+                  name="team_a_id"
+                  required
+                  value={selectedTeamA}
+                  onChange={(e) => setSelectedTeamA(e.target.value)}
+                  disabled={loadingTeams}
+                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <option value="">
+                    {loadingTeams ? "Loading..." : "Select Team A"}
+                  </option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowTeamAModal(true)}
+                  className="px-3 py-2 rounded-md text-sm font-medium text-white"
+                  style={{ background: "var(--accent)" }}
+                >
+                  + New
+                </button>
+              </div>
+            </div>
+
+            {/* Team B Selection */}
+            <div>
+              <label
+                htmlFor="team_b_id"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
+              >
+                Team B *
+              </label>
+              <div className="flex gap-2">
+                <select
+                  id="team_b_id"
+                  name="team_b_id"
+                  required
+                  value={selectedTeamB}
+                  onChange={(e) => setSelectedTeamB(e.target.value)}
+                  disabled={loadingTeams}
+                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                  style={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    color: "var(--foreground)",
+                  }}
+                >
+                  <option value="">
+                    {loadingTeams ? "Loading..." : "Select Team B"}
+                  </option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowTeamBModal(true)}
+                  className="px-3 py-2 rounded-md text-sm font-medium text-white"
+                  style={{ background: "var(--accent)" }}
+                >
+                  + New
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="match_date"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
+              >
+                Match Date *
+              </label>
+              <input
+                id="match_date"
+                name="match_date"
+                type="date"
+                required
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="overs_per_innings"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
+              >
+                Overs Per Innings * (1-10)
+              </label>
+              <input
+                id="overs_per_innings"
+                name="overs_per_innings"
+                type="number"
+                min="1"
+                max="10"
+                required
+                defaultValue="6"
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              />
+            </div>
+
+            {error && (
+              <div
+                className="rounded-md p-3 text-sm"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--danger) 10%, transparent)",
+                  border: "1px solid var(--danger)",
+                  color: "var(--danger)",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2 px-4 rounded-md font-medium"
+                style={{
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                style={{ background: "var(--accent)" }}
+              >
+                {loading ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </form>
         </div>
-      }
-    >
-      <NewMatchForm />
-    </Suspense>
+      </div>
+    </>
   );
 }

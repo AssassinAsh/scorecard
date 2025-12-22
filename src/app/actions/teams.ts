@@ -60,7 +60,7 @@ export async function createTeam(params: {
     return { error: error.message };
   }
 
-  revalidatePath(`/dashboard/tournament/${params.tournament_id}`);
+  revalidatePath(`/tournament/${params.tournament_id}`);
   return { team: data };
 }
 
@@ -88,7 +88,7 @@ export async function updateTeam(params: {
 
   const team = await getTeamById(params.id);
   if (team) {
-    revalidatePath(`/dashboard/tournament/${team.tournament_id}`);
+    revalidatePath(`/tournament/${team.tournament_id}`);
   }
 
   return {};
@@ -106,7 +106,7 @@ export async function deleteTeam(teamId: string): Promise<{ error?: string }> {
   }
 
   if (team) {
-    revalidatePath(`/dashboard/tournament/${team.tournament_id}`);
+    revalidatePath(`/tournament/${team.tournament_id}`);
   }
 
   return {};

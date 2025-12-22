@@ -39,8 +39,10 @@ export async function createMatch(formData: CreateMatchForm) {
     return { error: error.message };
   }
 
-  revalidatePath(`/dashboard/tournament/${formData.tournament_id}`);
-  redirect(`/dashboard/match/${data.id}/setup`);
+  // Refresh the public tournament and match pages
+  revalidatePath(`/tournament/${formData.tournament_id}`);
+  revalidatePath(`/match/${data.id}`);
+  redirect(`/match/${data.id}/setup`);
 }
 
 export async function getMatchesByTournament(tournamentId: string) {
@@ -138,12 +140,12 @@ export async function updateToss(matchId: string, tossData: TossDetailsForm) {
     return { error: error.message };
   }
 
-  revalidatePath(`/dashboard/match/${matchId}`);
+  // Refresh public match + related tournament pages
   revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/score`);
   if (match?.tournament_id) {
-    revalidatePath(`/dashboard/tournament/${match.tournament_id}`);
+    revalidatePath(`/tournament/${match.tournament_id}`);
   }
-  revalidatePath(`/dashboard/match/${matchId}/score`);
   return { success: true };
 }
 
@@ -192,7 +194,8 @@ export async function updateMatchStatus(matchId: string, status: MatchStatus) {
     return { error: error.message };
   }
 
-  revalidatePath(`/dashboard/match/${matchId}`);
+  revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/score`);
   return { success: true };
 }
 
@@ -213,7 +216,8 @@ export async function addPlayers(players: CreatePlayerForm[]) {
   }
 
   if (players.length > 0) {
-    revalidatePath(`/dashboard/match/${players[0].match_id}`);
+    revalidatePath(`/match/${players[0].match_id}`);
+    revalidatePath(`/match/${players[0].match_id}/setup`);
   }
 
   return { success: true };
@@ -265,7 +269,8 @@ export async function createPlayer(
     return { data: null, error: error.message };
   }
 
-  revalidatePath(`/dashboard/match/${matchId}/score`);
+  revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/setup`);
   return { data };
 }
 

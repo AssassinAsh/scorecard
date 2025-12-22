@@ -20,6 +20,8 @@ import {
 } from "@/lib/cricket/scoring";
 import ScoringInterface from "@/components/ScoringInterface";
 import AutoRefresh from "@/components/AutoRefresh";
+import InningsButton from "@/components/InningsButton";
+import { hasAccess } from "@/app/actions/tournaments";
 
 type LiveBattingRow = {
   playerId: string;
@@ -60,6 +62,9 @@ export default async function MatchPage({
   if (!match) {
     notFound();
   }
+
+  // Check if user has scorer access to this tournament
+  const hasScorerAccess = user ? await hasAccess(match.tournament_id) : false;
 
   const players = await getPlayersByMatch(id);
   const currentInnings = await getCurrentInnings(id);
@@ -642,7 +647,11 @@ export default async function MatchPage({
       >
         <div className="max-w-4xl mx-auto px-4 py-3">
           <Link
-            href={`/tournament/${match.tournament_id}`}
+            href={
+              user
+                ? `/tournament/${match.tournament_id}`
+                : `/tournament/${match.tournament_id}`
+            }
             className="text-sm hover:underline mb-2 inline-block"
             style={{ color: "var(--accent)" }}
           >
@@ -674,6 +683,46 @@ export default async function MatchPage({
           </div>
         </div>
       </header>
+
+      {/* Spectator Mode Banner for non-scorers */}
+      {user && !hasScorerAccess && (
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 rounded-r">
+            <p className="font-medium">👀 Spectator Mode</p>
+            <p className="text-sm mt-1">
+              You can view this match but cannot score.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Scorer Action Button */}
+      {hasScorerAccess && match.status !== "Completed" && (
+        <div className="max-w-4xl mx-auto px-4 pt-4">
+          <div className="flex gap-2">
+            <Link
+              href={`/match/${id}/setup`}
+              className="px-4 py-2 text-sm rounded-lg font-medium border"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--card-bg)",
+                color: "var(--text)",
+              }}
+            >
+              Match Setup
+            </Link>
+            {match.status === "Live" && (
+              <Link
+                href={`/match/${id}/score`}
+                className="px-4 py-2 text-sm rounded-lg font-medium"
+                style={{ background: "var(--accent)", color: "white" }}
+              >
+                📊 Score Match
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="max-w-4xl mx-auto px-4 py-4">
         {/* Previous Innings Summary (only for ongoing matches) */}
