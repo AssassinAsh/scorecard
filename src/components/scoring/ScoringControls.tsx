@@ -70,7 +70,7 @@ export default function ScoringControls({
         >
           <h3 className="text-sm font-medium mb-3">Ball Actions</h3>
           <div className="grid grid-cols-1 gap-3">
-            {/* Add Next Ball Button */}
+            {/* 1. Add Next Ball Button */}
             <button
               onClick={onAddBall}
               disabled={isRecording || needsNewOver}
@@ -83,23 +83,7 @@ export default function ScoringControls({
               {isRecording ? "Saving..." : "➕ Add Next Ball"}
             </button>
 
-            {/* Delete Last Delivery Button */}
-            {hasRecentBalls && (
-              <button
-                onClick={onDeleteLastBall}
-                disabled={isRecording}
-                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-              >
-                🗑 Delete Last Delivery
-              </button>
-            )}
-
-            {/* Change Strike Button */}
+            {/* 2. Change Strike Button */}
             {strikerId && nonStrikerId && (
               <button
                 onClick={onChangeStrike}
@@ -115,7 +99,39 @@ export default function ScoringControls({
               </button>
             )}
 
-            {/* Retire Batsman Button */}
+            {/* 3. Delete Last Delivery Button */}
+            {hasRecentBalls && (
+              <button
+                onClick={onDeleteLastBall}
+                disabled={isRecording}
+                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                🗑 Delete Last Delivery
+              </button>
+            )}
+
+            {/* 4. Change Player Button */}
+            {(strikerId || nonStrikerId || bowlerId) && (
+              <button
+                onClick={onChangeBowler}
+                disabled={isRecording}
+                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                Change Player
+              </button>
+            )}
+
+            {/* 5. Retire Batsman Button */}
             {(strikerId || nonStrikerId) && (
               <button
                 onClick={onRetireBatsman}
@@ -128,22 +144,6 @@ export default function ScoringControls({
                 }}
               >
                 Retire Batsman
-              </button>
-            )}
-
-            {/* Change Bowler (Current Over) Button */}
-            {bowlerId && (
-              <button
-                onClick={onChangeBowler}
-                disabled={isRecording}
-                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-              >
-                Change Bowler (This Over)
               </button>
             )}
           </div>

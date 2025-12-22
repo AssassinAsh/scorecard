@@ -2,6 +2,8 @@
 
 import type { Player } from "@/types";
 
+export type { Player };
+
 // New Over Modal
 interface NewOverModalProps {
   show: boolean;
@@ -282,27 +284,46 @@ export function RetireModal({
   );
 }
 
-// Change Bowler Modal
-interface ChangeBowlerModalProps {
+// Change Player Modal
+interface ChangePlayerModalProps {
   show: boolean;
-  newBowlerForOverId: string;
+  strikerId: string;
+  nonStrikerId: string;
+  bowlerId: string;
+  battingPlayers: Player[];
   bowlingPlayers: Player[];
+  dismissedPlayerIds: Set<string>;
+  retiredPlayerIds: Set<string>;
+  onStrikerChange: (id: string) => void;
+  onNonStrikerChange: (id: string) => void;
   onBowlerChange: (id: string) => void;
-  onAddPlayer: () => void;
+  onAddPlayer: (role: "striker" | "nonStriker" | "bowler") => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function ChangeBowlerModal({
+export function ChangePlayerModal({
   show,
-  newBowlerForOverId,
+  strikerId,
+  nonStrikerId,
+  bowlerId,
+  battingPlayers,
   bowlingPlayers,
+  dismissedPlayerIds,
+  retiredPlayerIds,
+  onStrikerChange,
+  onNonStrikerChange,
   onBowlerChange,
   onAddPlayer,
   onConfirm,
   onCancel,
-}: ChangeBowlerModalProps) {
+}: ChangePlayerModalProps) {
   if (!show) return null;
+
+  // Filter batters: exclude dismissed players, but allow retired players
+  const availableBatters = battingPlayers.filter(
+    (p) => !dismissedPlayerIds.has(p.id)
+  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -313,16 +334,87 @@ export function ChangeBowlerModal({
           border: "1px solid var(--border)",
         }}
       >
-        <h3 className="text-lg font-medium mb-4">Change Bowler</h3>
+        <h3 className="text-lg font-medium mb-4">Change Players</h3>
         <p className="text-sm muted-text mb-4">
-          Select new bowler for the current over
+          Update striker, non-striker, or bowler
         </p>
 
+        {/* Striker */}
+        <div className="mb-3">
+          <label className="text-sm muted-text mb-1 block">Striker *</label>
+          <div className="flex gap-2">
+            <select
+              value={strikerId}
+              onChange={(e) => onStrikerChange(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-md text-sm"
+              style={{
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+            >
+              <option value="">Select striker...</option>
+              {availableBatters.map((p) => (
+                <option
+                  key={p.id}
+                  value={p.id}
+                  disabled={p.id === nonStrikerId}
+                >
+                  {p.name}
+                  {p.id === nonStrikerId ? " (selected as non-striker)" : ""}
+                  {retiredPlayerIds.has(p.id) ? " (retired)" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onAddPlayer("striker")}
+              className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
+              style={{ background: "var(--accent)" }}
+            >
+              + New
+            </button>
+          </div>
+        </div>
+
+        {/* Non-Striker */}
+        <div className="mb-3">
+          <label className="text-sm muted-text mb-1 block">Non-Striker *</label>
+          <div className="flex gap-2">
+            <select
+              value={nonStrikerId}
+              onChange={(e) => onNonStrikerChange(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-md text-sm"
+              style={{
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+            >
+              <option value="">Select non-striker...</option>
+              {availableBatters.map((p) => (
+                <option key={p.id} value={p.id} disabled={p.id === strikerId}>
+                  {p.name}
+                  {p.id === strikerId ? " (selected as striker)" : ""}
+                  {retiredPlayerIds.has(p.id) ? " (retired)" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => onAddPlayer("nonStriker")}
+              className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
+              style={{ background: "var(--accent)" }}
+            >
+              + New
+            </button>
+          </div>
+        </div>
+
+        {/* Bowler */}
         <div className="mb-4">
           <label className="text-sm muted-text mb-1 block">Bowler *</label>
           <div className="flex gap-2">
             <select
-              value={newBowlerForOverId}
+              value={bowlerId}
               onChange={(e) => onBowlerChange(e.target.value)}
               className="flex-1 px-3 py-2 rounded-md text-sm"
               style={{
@@ -339,7 +431,7 @@ export function ChangeBowlerModal({
               ))}
             </select>
             <button
-              onClick={onAddPlayer}
+              onClick={() => onAddPlayer("bowler")}
               className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
               style={{ background: "var(--accent)" }}
             >
@@ -351,11 +443,11 @@ export function ChangeBowlerModal({
         <div className="flex gap-2">
           <button
             onClick={onConfirm}
-            disabled={!newBowlerForOverId}
+            disabled={!strikerId || !nonStrikerId || !bowlerId}
             className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "var(--accent)" }}
           >
-            Change Bowler
+            Update Players
           </button>
           <button
             onClick={onCancel}

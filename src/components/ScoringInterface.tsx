@@ -31,7 +31,7 @@ import {
   DeleteBallModal,
   ChangeStrikeModal,
   RetireModal,
-  ChangeBowlerModal,
+  ChangePlayerModal,
 } from "./scoring/UtilityModals";
 
 type BallAction =
@@ -235,9 +235,11 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const [retirePlayerId, setRetirePlayerId] = useState<string>("");
   const [retireReason, setRetireReason] = useState<string>("");
 
-  // Change bowler modal (for current over)
-  const [showChangeBowlerModal, setShowChangeBowlerModal] = useState(false);
-  const [newBowlerForOverId, setNewBowlerForOverId] = useState<string>("");
+  // Change player modal (for updating striker, non-striker, or bowler mid-innings)
+  const [showChangePlayerModal, setShowChangePlayerModal] = useState(false);
+  const [tempStrikerId, setTempStrikerId] = useState<string>("");
+  const [tempNonStrikerId, setTempNonStrikerId] = useState<string>("");
+  const [tempBowlerId, setTempBowlerId] = useState<string>("");
 
   // Computed values
   const leftTeam: "A" | "B" = firstInningsTeam || "A";
@@ -268,6 +270,18 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const battingPlayers = existingPlayers.filter((p) => p.team === battingTeam);
   const bowlingPlayers = existingPlayers.filter((p) => p.team === bowlingTeam);
   const fieldingPlayers = bowlingPlayers;
+
+  // Track dismissed players (from liveBatting.isOut) and retired players
+  const dismissedPlayerIds = new Set<string>(
+    liveBatting.filter((b) => b.isOut).map((b) => b.playerId)
+  );
+
+  // Retired players come from the live batting list where isOut is false but dismissal contains "retired"
+  const retiredPlayerIds = new Set<string>(
+    liveBatting
+      .filter((b) => !b.isOut && b.dismissal?.toLowerCase().includes("retired"))
+      .map((b) => b.playerId)
+  );
 
   // Balls belonging to the currently selected over
   const currentOverBalls = recentBalls.filter(
@@ -476,46 +490,50 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     setRetireReason("");
   };
 
-  const handleChangeBowlerForOver = async () => {
-    if (!currentOverId || !newBowlerForOverId) return;
+  const handleChangePlayer = async () => {
+    // Update current players with temp selections
+    setStrikerId(tempStrikerId);
+    setNonStrikerId(tempNonStrikerId);
 
-    // If no balls have been bowled in this over yet, simply correct the bowler
-    if (currentOverBalls.length === 0) {
-      const result = await updateOverBowler(currentOverId, newBowlerForOverId);
+    // Handle bowler change if needed
+    if (tempBowlerId !== bowlerId) {
+      if (!currentOverId || !tempBowlerId) return;
 
-      if ((result as { error?: string })?.error) {
-        alert(result.error);
-        return;
+      // If no balls have been bowled in this over yet, simply correct the bowler
+      if (currentOverBalls.length === 0) {
+        const result = await updateOverBowler(currentOverId, tempBowlerId);
+
+        if ((result as { error?: string })?.error) {
+          alert(result.error);
+          return;
+        }
+
+        setBowlerId(tempBowlerId);
+      } else {
+        // Mid-over change: start a new over for the new bowler
+        const overNumber = Math.floor(ballsBowled / 6) + 1;
+        const result = await startNewOver(inningsId, overNumber, tempBowlerId);
+
+        if (result?.error) {
+          alert(result.error);
+          return;
+        }
+
+        if (result?.data) {
+          setBowlerId(tempBowlerId);
+          setCurrentOverId(result.data.id);
+          hasSetNewOver.current = true;
+        } else {
+          alert("Could not change bowler");
+          return;
+        }
       }
-
-      setBowlerId(newBowlerForOverId);
-      setShowChangeBowlerModal(false);
-      setNewBowlerForOverId("");
-      return;
     }
 
-    // Mid-over change: start a new over for the new bowler
-    const overNumber = Math.floor(ballsBowled / 6) + 1;
-    const result = await startNewOver(
-      inningsId,
-      overNumber,
-      newBowlerForOverId
-    );
-
-    if (result?.error) {
-      alert(result.error);
-      return;
-    }
-
-    if (result?.data) {
-      setBowlerId(newBowlerForOverId);
-      setCurrentOverId(result.data.id);
-      hasSetNewOver.current = true;
-      setShowChangeBowlerModal(false);
-      setNewBowlerForOverId("");
-    } else {
-      alert("Could not change bowler");
-    }
+    setShowChangePlayerModal(false);
+    setTempStrikerId("");
+    setTempNonStrikerId("");
+    setTempBowlerId("");
   };
 
   // Confirm new over after bowler selected
@@ -802,8 +820,10 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
             setShowRetireModal(true);
           }}
           onChangeBowler={() => {
-            setNewBowlerForOverId(bowlerId);
-            setShowChangeBowlerModal(true);
+            setTempStrikerId(strikerId);
+            setTempNonStrikerId(nonStrikerId);
+            setTempBowlerId(bowlerId);
+            setShowChangePlayerModal(true);
           }}
           onStartNewOver={handleStartNewOver}
         />
@@ -944,20 +964,29 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
             }}
           />
 
-          <ChangeBowlerModal
-            show={showChangeBowlerModal}
-            newBowlerForOverId={newBowlerForOverId}
+          <ChangePlayerModal
+            show={showChangePlayerModal}
+            strikerId={tempStrikerId}
+            nonStrikerId={tempNonStrikerId}
+            bowlerId={tempBowlerId}
+            battingPlayers={battingPlayers}
             bowlingPlayers={bowlingPlayers}
-            onBowlerChange={setNewBowlerForOverId}
-            onAddPlayer={() => {
-              setAddingPlayerFor("bowler");
+            dismissedPlayerIds={dismissedPlayerIds}
+            retiredPlayerIds={retiredPlayerIds}
+            onStrikerChange={setTempStrikerId}
+            onNonStrikerChange={setTempNonStrikerId}
+            onBowlerChange={setTempBowlerId}
+            onAddPlayer={(role) => {
+              setAddingPlayerFor(role);
               setShowAddPlayer(true);
-              setShowChangeBowlerModal(false);
+              setShowChangePlayerModal(false);
             }}
-            onConfirm={handleChangeBowlerForOver}
+            onConfirm={handleChangePlayer}
             onCancel={() => {
-              setShowChangeBowlerModal(false);
-              setNewBowlerForOverId("");
+              setShowChangePlayerModal(false);
+              setTempStrikerId("");
+              setTempNonStrikerId("");
+              setTempBowlerId("");
             }}
           />
         </>
