@@ -219,6 +219,11 @@ CREATE POLICY "Authenticated update matches"
 ON matches FOR UPDATE
 USING (auth.role() = 'authenticated');
 
+-- Allow only admins (via is_admin() helper) to delete matches
+CREATE POLICY "Admin delete matches"
+ON matches FOR DELETE
+USING (is_admin());
+
 -- Players
 CREATE POLICY "Public read players"
 ON players FOR SELECT

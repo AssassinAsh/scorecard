@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getTournamentById, hasAccess } from "@/app/actions/tournaments";
+import {
+  getTournamentById,
+  hasAccess,
+  isAdmin,
+} from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { createClient } from "@/lib/supabase/server";
 import DashboardMatchCard from "@/components/DashboardMatchCard";
@@ -39,6 +43,7 @@ async function TournamentPageContent({
 
   // Check if user has scorer access
   const hasScorerAccess = user ? await hasAccess(id) : false;
+  const admin = user ? await isAdmin() : false;
 
   const matches = await getMatchesByTournament(id);
 
@@ -173,6 +178,7 @@ async function TournamentPageContent({
                 <DashboardMatchCard
                   key={match.id}
                   match={match}
+                  isAdmin={admin}
                   winnerText={winnerText}
                 />
               ) : (

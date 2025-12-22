@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Match } from "@/types";
 import { startInnings } from "@/app/actions/scoring";
-import { updateMatchStatus } from "@/app/actions/matches";
+import { updateMatchStatus, deleteMatch } from "@/app/actions/matches";
 import TossForm from "./TossForm";
 
 interface DashboardMatchCardProps {
   match: Match;
+  isAdmin?: boolean;
   winnerText?: string | null;
 }
 
 export default function DashboardMatchCard({
   match,
+  isAdmin,
   winnerText,
 }: DashboardMatchCardProps) {
   const router = useRouter();
@@ -168,6 +170,26 @@ export default function DashboardMatchCard({
           >
             {primary.label}
           </button>
+        )}
+        {isAdmin && (
+          <form action={deleteMatch}>
+            <input type="hidden" name="matchId" value={match.id} />
+            <button
+              type="submit"
+              onClick={(e) => {
+                if (
+                  !window.confirm(
+                    "Are you sure you want to delete this match and all its data?"
+                  )
+                ) {
+                  e.preventDefault();
+                }
+              }}
+              className="text-sm px-3 py-1.5 rounded-md font-medium text-white bg-red-600 ml-1"
+            >
+              Delete Match
+            </button>
+          </form>
         )}
       </div>
 

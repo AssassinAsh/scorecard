@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "../actions/tournaments";
 import type {
   CreateMatchForm,
   TossDetailsForm,
@@ -247,6 +248,50 @@ export async function updateMatchStatus(matchId: string, status: MatchStatus) {
 
   revalidatePath(`/match/${matchId}`);
   revalidatePath(`/match/${matchId}/score`);
+  return { success: true };
+}
+
+export async function deleteMatch(formData: FormData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  const admin = await isAdmin();
+  if (!admin) {
+    return { error: "Only admin can delete matches" };
+  }
+
+  const matchId = formData.get("matchId") as string | null;
+  if (!matchId) {
+    return { error: "Match ID is required" };
+  }
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("tournament_id")
+    .eq("id", matchId)
+    .single();
+
+  const tournamentId = match?.tournament_id as string | undefined;
+
+  const { error } = await supabase.from("matches").delete().eq("id", matchId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (tournamentId) {
+    revalidatePath(`/tournament/${tournamentId}`);
+  }
+  revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/score`);
+  revalidatePath(`/match/${matchId}/setup`);
+
   return { success: true };
 }
 
