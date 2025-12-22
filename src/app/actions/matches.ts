@@ -31,6 +31,7 @@ export async function createMatch(formData: CreateMatchForm) {
       team_b_id: formData.team_b_id,
       match_date: formData.match_date,
       overs_per_innings: formData.overs_per_innings,
+      match_type: formData.match_type,
       status: "Upcoming",
     })
     .select()
@@ -105,8 +106,8 @@ export async function getMatchesByTournament(tournamentId: string) {
     .select(
       `
       *,
-      team_a:teams!matches_team_a_id_fkey(id, name),
-      team_b:teams!matches_team_b_id_fkey(id, name)
+      team_a:teams!matches_team_a_id_fkey(id, name, contact_number),
+      team_b:teams!matches_team_b_id_fkey(id, name, contact_number)
     `
     )
     .eq("tournament_id", tournamentId)
@@ -122,6 +123,8 @@ export async function getMatchesByTournament(tournamentId: string) {
     ...match,
     team_a_name: match.team_a?.name || match.team_a_name || "",
     team_b_name: match.team_b?.name || match.team_b_name || "",
+    team_a_contact: match.team_a?.contact_number ?? null,
+    team_b_contact: match.team_b?.contact_number ?? null,
   }));
 }
 
@@ -134,8 +137,8 @@ export async function getMatchById(id: string) {
       `
       *,
       tournaments (*),
-      team_a:teams!matches_team_a_id_fkey(id, name),
-      team_b:teams!matches_team_b_id_fkey(id, name)
+      team_a:teams!matches_team_a_id_fkey(id, name, contact_number),
+      team_b:teams!matches_team_b_id_fkey(id, name, contact_number)
     `
     )
     .eq("id", id)
@@ -152,6 +155,8 @@ export async function getMatchById(id: string) {
       ...data,
       team_a_name: data.team_a?.name || (data as any).team_a_name || "",
       team_b_name: data.team_b?.name || (data as any).team_b_name || "",
+      team_a_contact: data.team_a?.contact_number ?? null,
+      team_b_contact: data.team_b?.contact_number ?? null,
     };
   }
 

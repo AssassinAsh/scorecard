@@ -53,6 +53,19 @@ export default async function MatchSetupPage({
           <h1 className="text-lg sm:text-xl font-medium">
             {match.team_a_name} vs {match.team_b_name}
           </h1>
+          <p className="text-sm muted-text mt-1">
+            {new Date(match.match_date).toLocaleDateString("en-US", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}{" "}
+            • {match.overs_per_innings} overs
+          </p>
+          {match.match_type && (
+            <p className="text-xs muted-text mt-1 uppercase tracking-wide">
+              {match.match_type}
+            </p>
+          )}
           <p className="text-sm muted-text">Match Setup</p>
         </div>
       </header>

@@ -30,11 +30,17 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- =====================
 
 CREATE TYPE match_status AS ENUM (
-	'Upcoming',
-	'Starting Soon',
-	'Live',
-	'Innings Break',
-	'Completed'
+  'Upcoming',
+  'Starting Soon',
+  'Live',
+  'Innings Break',
+  'Completed'
+);
+CREATE TYPE match_type AS ENUM (
+  'Knock-Out',
+  'Quarter Final',
+  'Semi Final',
+  'Final'
 );
 CREATE TYPE toss_decision_type AS ENUM ('Bat', 'Bowl');
 CREATE TYPE team_side AS ENUM ('A', 'B');
@@ -76,6 +82,7 @@ team_b_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
 match_date DATE NOT NULL,
 overs_per_innings INTEGER NOT NULL DEFAULT 20 CHECK (overs_per_innings > 0),
 status match_status NOT NULL DEFAULT 'Upcoming',
+match_type match_type,
 toss_winner team_side,
 toss_decision toss_decision_type,
 winner_team team_side,

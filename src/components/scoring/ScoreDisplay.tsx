@@ -7,6 +7,8 @@ interface ScoreDisplayProps {
   battingTeam: "A" | "B";
   teamAName: string;
   teamBName: string;
+  teamAContact?: string | null;
+  teamBContact?: string | null;
 
   // Score
   currentScore: number;
@@ -65,6 +67,8 @@ export default function ScoreDisplay({
   battingTeam,
   teamAName,
   teamBName,
+  teamAContact,
+  teamBContact,
   currentScore,
   currentWickets,
   ballsBowled,
@@ -99,6 +103,15 @@ export default function ScoreDisplay({
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-sm font-medium team-name mb-1">{teamAName}</h2>
+            {teamAContact && (
+              <a
+                href={`tel:${teamAContact}`}
+                className="text-xs block"
+                style={{ color: "var(--accent)" }}
+              >
+                {teamAContact}
+              </a>
+            )}
             <div className="flex items-baseline gap-2">
               <span
                 className="text-2xl font-semibold"
@@ -114,6 +127,15 @@ export default function ScoreDisplay({
 
           <div className="text-right">
             <h2 className="text-sm font-medium team-name mb-1">{teamBName}</h2>
+            {teamBContact && (
+              <a
+                href={`tel:${teamBContact}`}
+                className="text-xs block"
+                style={{ color: "var(--accent)" }}
+              >
+                {teamBContact}
+              </a>
+            )}
             <div className="flex items-baseline gap-2 justify-end">
               <span
                 className="text-2xl font-semibold"

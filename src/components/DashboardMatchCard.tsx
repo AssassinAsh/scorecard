@@ -149,12 +149,19 @@ export default function DashboardMatchCard({
             · {match.overs_per_innings} overs
           </p>
         </Link>
-        <span
-          className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap flex-shrink-0"
-          style={statusStyles}
-        >
-          {match.status}
-        </span>
+        <div className="text-right flex-shrink-0">
+          <span
+            className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap inline-block"
+            style={statusStyles}
+          >
+            {match.status}
+          </span>
+          {match.match_type && (
+            <div className="mt-1 text-[11px] font-medium uppercase tracking-wide muted-text">
+              {match.match_type}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2 mt-2">

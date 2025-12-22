@@ -22,8 +22,9 @@ import {
 import ScoringInterface from "@/components/ScoringInterface";
 import AutoRefresh from "@/components/AutoRefresh";
 import InningsButton from "@/components/InningsButton";
-import { hasAccess } from "@/app/actions/tournaments";
+import { hasAccess, isAdmin } from "@/app/actions/tournaments";
 import { MatchSkeleton } from "@/components/Skeletons";
+import MatchHeader from "@/components/MatchHeader";
 
 type LiveBattingRow = {
   playerId: string;
@@ -75,6 +76,8 @@ async function MatchPageContent({
 
   // Check if user has scorer access to this tournament
   const hasScorerAccess = user ? await hasAccess(match.tournament_id) : false;
+  const admin = user ? await isAdmin() : false;
+  const canEditContacts = Boolean(user && (hasScorerAccess || admin));
 
   const players = await getPlayersByMatch(id);
   const currentInnings = await getCurrentInnings(id);
@@ -648,91 +651,38 @@ async function MatchPageContent({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      <header
-        className="border-b"
-        style={{
-          background: "var(--card-bg)",
-          borderColor: "var(--border)",
-        }}
-      >
+      <div style={{ background: "var(--card-bg)" }}>
         <div className="max-w-4xl mx-auto px-4 py-3">
           <Link
-            href={
-              user
-                ? `/tournament/${match.tournament_id}`
-                : `/tournament/${match.tournament_id}`
-            }
+            href={`/tournament/${match.tournament_id}`}
             className="text-sm hover:underline mb-2 inline-block"
             style={{ color: "var(--accent)" }}
           >
             ← Back to Tournament
           </Link>
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg sm:text-xl font-medium">
-              {match.team_a_name} vs {match.team_b_name}
-            </h1>
-            <span
-              className="px-2 py-1 rounded text-xs font-medium"
-              style={{
-                background:
-                  match.status === "Completed"
-                    ? "rgba(15, 157, 88, 0.1)"
-                    : match.status === "Live"
-                    ? "rgba(234, 67, 53, 0.1)"
-                    : "rgba(128, 134, 139, 0.1)",
-                color:
-                  match.status === "Completed"
-                    ? "var(--success)"
-                    : match.status === "Live"
-                    ? "var(--danger)"
-                    : "var(--muted)",
-              }}
-            >
-              {match.status}
-            </span>
-          </div>
         </div>
-      </header>
+      </div>
 
-      {/* Spectator Mode Banner for non-scorers */}
-      {user && !hasScorerAccess && (
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 rounded-r">
-            <p className="font-medium">👀 Spectator Mode</p>
-            <p className="text-sm mt-1">
-              You can view this match but cannot score.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Scorer Action Button */}
-      {hasScorerAccess && match.status !== "Completed" && (
-        <div className="max-w-4xl mx-auto px-4 pt-4">
-          <div className="flex gap-2">
-            <Link
-              href={`/match/${id}/setup`}
-              className="px-4 py-2 text-sm rounded-lg font-medium border"
-              style={{
-                borderColor: "var(--border)",
-                background: "var(--card-bg)",
-                color: "var(--text)",
-              }}
-            >
-              Match Setup
-            </Link>
-            {match.status === "Live" && (
-              <Link
-                href={`/match/${id}/score`}
-                className="px-4 py-2 text-sm rounded-lg font-medium"
-                style={{ background: "var(--accent)", color: "white" }}
-              >
-                📊 Score Match
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+      <MatchHeader
+        match={{
+          id: match.id,
+          tournament_id: match.tournament_id,
+          team_a_id: match.team_a_id,
+          team_b_id: match.team_b_id,
+          team_a_name: match.team_a_name,
+          team_b_name: match.team_b_name,
+          team_a_contact: match.team_a_contact ?? null,
+          team_b_contact: match.team_b_contact ?? null,
+          status: match.status,
+          match_type: match.match_type,
+          match_date: match.match_date,
+          overs: match.overs_per_innings,
+        }}
+        canEditContacts={canEditContacts}
+        showScorerActions={hasScorerAccess && match.status !== "Completed"}
+        hasTossData={Boolean(match.toss_winner_id)}
+        hasPlayers={players.length > 0}
+      />
 
       <main className="max-w-4xl mx-auto px-4 py-4">
         {/* Previous Innings Summary (only for ongoing matches) */}
@@ -780,6 +730,8 @@ async function MatchPageContent({
             bowlingTeam={displayInnings.bowling_team}
             teamAName={match.team_a_name}
             teamBName={match.team_b_name}
+            teamAContact={canEditContacts ? match.team_a_contact ?? null : null}
+            teamBContact={canEditContacts ? match.team_b_contact ?? null : null}
             currentScore={displayInnings.total_runs}
             currentWickets={displayInnings.wickets}
             ballsBowled={displayInnings.balls_bowled}

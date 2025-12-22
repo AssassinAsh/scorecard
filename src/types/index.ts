@@ -6,6 +6,7 @@ export type MatchStatus =
   | "Live"
   | "Innings Break"
   | "Completed";
+export type MatchType = "Knock-Out" | "Quarter Final" | "Semi Final" | "Final";
 export type Team = "A" | "B";
 export type TeamSide = "A" | "B";
 export type TossDecision = "Bat" | "Bowl";
@@ -53,8 +54,11 @@ export interface Match {
   team_b_id: string;
   team_a_name: string; // Joined field - now required with default
   team_b_name: string; // Joined field - now required with default
+  team_a_contact?: string | null;
+  team_b_contact?: string | null;
   match_date: string;
   overs_per_innings: number;
+  match_type: MatchType | null;
   status: MatchStatus;
   toss_winner: TeamSide | null;
   toss_decision: TossDecision | null;
@@ -143,6 +147,7 @@ export interface CreateMatchForm {
   team_b_id: string;
   match_date: string;
   overs_per_innings: number;
+  match_type: MatchType;
 }
 
 export interface CreatePlayerForm {

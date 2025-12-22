@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createMatch } from "@/app/actions/matches";
 import { getTeamsByTournament, createTeam } from "@/app/actions/teams";
-import type { TeamInfo } from "@/types";
+import type { TeamInfo, MatchType } from "@/types";
 
 interface NewMatchDialogProps {
   isOpen: boolean;
@@ -88,6 +88,7 @@ export default function NewMatchDialog({
       team_b_id: formData.get("team_b_id") as string,
       match_date: formData.get("match_date") as string,
       overs_per_innings: parseInt(formData.get("overs_per_innings") as string),
+      match_type: (formData.get("match_type") as MatchType) || "Knock-Out",
     });
 
     if (result?.error) {
@@ -343,6 +344,33 @@ export default function NewMatchDialog({
                   color: "var(--foreground)",
                 }}
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="match_type"
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--muted)" }}
+              >
+                Match Type *
+              </label>
+              <select
+                id="match_type"
+                name="match_type"
+                required
+                defaultValue="Knock-Out"
+                className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <option value="Knock-Out">Knock-Out</option>
+                <option value="Quarter Final">Quarter Final</option>
+                <option value="Semi Final">Semi Final</option>
+                <option value="Final">Final</option>
+              </select>
             </div>
 
             <div>

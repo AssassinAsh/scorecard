@@ -109,6 +109,8 @@ interface ScoringInterfaceProps {
   teamBSummary?: { runs: number; wickets: number; overs: string } | null;
   matchResult?: string | null;
   readOnly?: boolean;
+  teamAContact?: string | null;
+  teamBContact?: string | null;
 }
 
 export default function ScoringInterface(props: ScoringInterfaceProps) {
@@ -141,6 +143,8 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     teamBSummary,
     matchResult,
     readOnly = false,
+    teamAContact,
+    teamBContact,
   } = props;
 
   // Get the latest ball to extract current players

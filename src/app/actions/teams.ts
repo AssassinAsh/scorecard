@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { TeamInfo } from "@/types";
 
+const CONTACT_REGEX = /^\d{10}$/;
+
 export async function getTeamsByTournament(
   tournamentId: string
 ): Promise<TeamInfo[]> {
@@ -45,6 +47,13 @@ export async function createTeam(params: {
 }): Promise<{ error?: string; team?: TeamInfo }> {
   const supabase = await createClient();
 
+  if (
+    params.contact_number &&
+    !CONTACT_REGEX.test(params.contact_number.trim())
+  ) {
+    return { error: "Please enter a valid 10-digit mobile number" };
+  }
+
   const { data, error } = await supabase
     .from("teams")
     .insert({
@@ -72,9 +81,24 @@ export async function updateTeam(params: {
   const supabase = await createClient();
 
   const updateData: Record<string, any> = {};
-  if (params.name) updateData.name = params.name.trim();
-  if (params.contact_number !== undefined)
-    updateData.contact_number = params.contact_number.trim() || null;
+
+  // Validate team name if provided
+  if (params.name !== undefined) {
+    const trimmedName = params.name.trim();
+    if (!trimmedName) {
+      return { error: "Team name cannot be empty" };
+    }
+    updateData.name = trimmedName;
+  }
+
+  // Validate contact number if provided
+  if (params.contact_number !== undefined) {
+    const trimmed = params.contact_number.trim();
+    if (trimmed && !CONTACT_REGEX.test(trimmed)) {
+      return { error: "Please enter a valid 10-digit mobile number" };
+    }
+    updateData.contact_number = trimmed || null;
+  }
 
   const { error } = await supabase
     .from("teams")
@@ -110,4 +134,40 @@ export async function deleteTeam(teamId: string): Promise<{ error?: string }> {
   }
 
   return {};
+}
+
+export async function updateTeamContacts(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const teamAId = formData.get("team_a_id") as string | null;
+  const teamBId = formData.get("team_b_id") as string | null;
+  const teamAContact = (formData.get("team_a_contact") as string | null) || "";
+  const teamBContact = (formData.get("team_b_contact") as string | null) || "";
+  const tournamentId = formData.get("tournament_id") as string | null;
+  const matchId = formData.get("match_id") as string | null;
+
+  if (teamAId) {
+    await updateTeam({ id: teamAId, contact_number: teamAContact });
+  }
+
+  if (teamBId) {
+    await updateTeam({ id: teamBId, contact_number: teamBContact });
+  }
+
+  if (matchId) {
+    revalidatePath(`/match/${matchId}`);
+    revalidatePath(`/match/${matchId}/score`);
+  }
+
+  if (tournamentId) {
+    revalidatePath(`/tournament/${tournamentId}`);
+  }
 }
