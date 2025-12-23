@@ -186,7 +186,7 @@ export async function recordBall(ballData: CreateBallForm) {
     return { error: "Over not found" };
   }
 
-  // Get current innings data
+  // Get current innings data with match info
   const { data: innings } = await supabase
     .from("innings")
     .select("*, matches(*)")
@@ -197,6 +197,20 @@ export async function recordBall(ballData: CreateBallForm) {
     return { error: "Innings not found" };
   }
 
+  // Parallelize allInnings fetch and legal ball count
+  const [allInningsResult, legalBallCountResult] = await Promise.all([
+    supabase
+      .from("innings")
+      .select("*")
+      .eq("match_id", innings.match_id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("balls")
+      .select("id, overs!inner(innings_id)", { count: "exact", head: true })
+      .eq("overs.innings_id", over.innings_id)
+      .in("extras_type", ["None", "Bye", "LegBye"]),
+  ]);
+
   // Calculate updates for this ball
   const totalRuns = calculateBallRuns(
     ballData.runs_off_bat,
@@ -205,15 +219,8 @@ export async function recordBall(ballData: CreateBallForm) {
   const isLegal = isLegalBall(ballData.extras_type);
   const hasWicket = ballData.wicket_type !== "None" ? 1 : 0;
 
-  // Recalculate total legal balls for the entire innings from the balls table.
-  // This guarantees that wides/no-balls are never counted as legal deliveries
-  // even if there was any earlier aggregation bug.
-  const { count: legalBallCount } = await supabase
-    .from("balls")
-    .select("id, overs!inner(innings_id)", { count: "exact", head: true })
-    .eq("overs.innings_id", over.innings_id)
-    .in("extras_type", ["None", "Bye", "LegBye"]);
-
+  // Use pre-fetched legal ball count from parallel query above
+  const { count: legalBallCount } = legalBallCountResult;
   const newBallsBowled = legalBallCount || 0;
 
   // Update innings aggregates
@@ -225,13 +232,8 @@ export async function recordBall(ballData: CreateBallForm) {
     innings.matches.overs_per_innings
   );
 
-  // Determine match result in case of second innings
-  // Fetch all innings for this match to find the first innings target.
-  const { data: allInnings } = await supabase
-    .from("innings")
-    .select("*")
-    .eq("match_id", innings.match_id)
-    .order("created_at", { ascending: true });
+  // Use pre-fetched allInnings from parallel query above
+  const { data: allInnings } = allInningsResult;
 
   if (allInnings && allInnings.length > 0) {
     const firstInnings = allInnings[0];
@@ -324,9 +326,49 @@ export async function recordBall(ballData: CreateBallForm) {
   };
 }
 
-export async function getInningsWithBalls(inningsId: string) {
+export async function getInningsWithBalls(
+  inningsId: string,
+  ballsLimit?: number
+) {
   const supabase = await createClient();
 
+  // If limit specified, fetch innings metadata separately then limited balls
+  if (ballsLimit) {
+    const { data: innings, error: inningsError } = await supabase
+      .from("innings")
+      .select("*")
+      .eq("id", inningsId)
+      .single();
+
+    if (inningsError || !innings) {
+      console.error("Error fetching innings:", inningsError);
+      return null;
+    }
+
+    // Fetch overs with limited balls
+    const { data: overs, error: oversError } = await supabase
+      .from("overs")
+      .select(
+        `
+        *,
+        balls (
+          *
+        )
+      `
+      )
+      .eq("innings_id", inningsId)
+      .order("created_at", { ascending: false })
+      .limit(Math.ceil(ballsLimit / 6)); // Approximate overs needed
+
+    if (oversError) {
+      console.error("Error fetching overs:", oversError);
+      return { ...innings, overs: [] };
+    }
+
+    return { ...innings, overs: overs || [] };
+  }
+
+  // Default: fetch all balls (for completed innings scorecards)
   const { data, error } = await supabase
     .from("innings")
     .select(

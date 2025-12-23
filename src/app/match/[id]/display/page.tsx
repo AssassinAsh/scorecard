@@ -14,6 +14,13 @@ import {
   calculateBallRuns,
   isLegalBall,
 } from "@/lib/cricket/scoring";
+import {
+  calculateBattingStats,
+  calculateBowlingStats,
+  buildDismissalMap,
+  formatStrikeRate,
+  formatEconomy,
+} from "@/lib/cricket/stats";
 import AutoRefresh from "@/components/AutoRefresh";
 import FullscreenDisplay from "@/components/FullscreenDisplay";
 
@@ -123,68 +130,9 @@ async function DisplayPageContent({
       (p) => p.team === displayInnings.bowling_team
     );
 
-    const battingStatsMap = new Map<
-      string,
-      { runs: number; balls: number; fours: number; sixes: number }
-    >();
-    const bowlingStatsMap = new Map<
-      string,
-      { runs: number; legalBalls: number; wickets: number }
-    >();
-
-    if (inningsDetail.overs) {
-      for (const over of inningsDetail.overs) {
-        const overBalls = over.balls || [];
-        const bowlerId: string | null = over.bowler_id;
-
-        for (const ball of overBalls) {
-          const strikerId: string = ball.striker_id;
-          const runsOffBat: number = ball.runs_off_bat;
-          const legal = isLegalBall(ball.extras_type);
-
-          if (!battingStatsMap.has(strikerId)) {
-            battingStatsMap.set(strikerId, {
-              runs: 0,
-              balls: 0,
-              fours: 0,
-              sixes: 0,
-            });
-          }
-          const bs = battingStatsMap.get(strikerId)!;
-          bs.runs += runsOffBat;
-          if (legal) bs.balls += 1;
-          if (runsOffBat === 4) bs.fours += 1;
-          if (runsOffBat === 6) bs.sixes += 1;
-        }
-
-        if (bowlerId) {
-          if (!bowlingStatsMap.has(bowlerId)) {
-            bowlingStatsMap.set(bowlerId, {
-              runs: 0,
-              legalBalls: 0,
-              wickets: 0,
-            });
-          }
-          const bowlerStats = bowlingStatsMap.get(bowlerId)!;
-
-          for (const ball of overBalls) {
-            const runsConceded = calculateBallRuns(
-              ball.runs_off_bat,
-              ball.extras_runs
-            );
-            bowlerStats.runs += runsConceded;
-
-            if (isLegalBall(ball.extras_type)) {
-              bowlerStats.legalBalls += 1;
-            }
-
-            if (ball.wicket_type !== "None" && ball.wicket_type !== "RunOut") {
-              bowlerStats.wickets += 1;
-            }
-          }
-        }
-      }
-    }
+    // Use shared stat calculation utilities
+    const battingStatsMap = calculateBattingStats(inningsDetail);
+    const bowlingStatsMap = calculateBowlingStats(inningsDetail);
 
     liveBatting = battingPlayers
       .slice()
@@ -203,8 +151,7 @@ async function DisplayPageContent({
           balls: s.balls,
           fours: s.fours,
           sixes: s.sixes,
-          strikeRate:
-            s.balls === 0 ? "-" : ((s.runs * 100) / s.balls).toFixed(1),
+          strikeRate: formatStrikeRate(s.runs, s.balls),
         };
       });
 
@@ -218,8 +165,7 @@ async function DisplayPageContent({
           overs: formatOvers(calculateOvers(s.legalBalls)),
           runs: s.runs,
           wickets: s.wickets,
-          economy:
-            s.legalBalls === 0 ? "-" : ((s.runs * 6) / s.legalBalls).toFixed(1),
+          economy: formatEconomy(s.runs, s.legalBalls),
         };
       })
       .filter((row): row is LiveBowlingRow => row !== null);
