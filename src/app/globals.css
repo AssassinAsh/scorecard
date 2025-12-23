@@ -38,6 +38,25 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* Fullscreen display mode for match display page */
+html.display-fullscreen {
+  height: 100vh;
+  overflow: hidden;
+}
+
+html.display-fullscreen body {
+  height: 100vh;
+  overflow: hidden;
+}
+
+html.display-fullscreen body > div > header,
+html.display-fullscreen body > div > footer {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
 button,
 button[type="button"],
 button[type="submit"],

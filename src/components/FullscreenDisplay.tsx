@@ -81,6 +81,23 @@ export default function FullscreenDisplay({
     };
   }, []);
 
+  // When in fullscreen mode, hide the app header/footer and prevent scrolling
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+
+    if (isFullscreen) {
+      root.classList.add("display-fullscreen");
+    } else {
+      root.classList.remove("display-fullscreen");
+    }
+
+    return () => {
+      root.classList.remove("display-fullscreen");
+    };
+  }, [isFullscreen]);
+
   useEffect(() => {
     setLastUpdate(Date.now());
   }, [displayInnings?.total_runs, displayInnings?.wickets]);
@@ -91,10 +108,23 @@ export default function FullscreenDisplay({
   }, []);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+    if (!isFullscreen) {
+      // Enter fullscreen
+      setIsFullscreen(true);
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {
+          // If the browser blocks fullscreen, we still keep our internal
+          // fullscreen layout (header/footer hidden, no scroll).
+        });
+      }
     } else {
-      document.exitFullscreen();
+      // Exit fullscreen
+      setIsFullscreen(false);
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {
+          // Ignore errors from exiting fullscreen.
+        });
+      }
     }
   };
 
@@ -131,457 +161,476 @@ export default function FullscreenDisplay({
     <div
       style={{
         minHeight: "100vh",
+        height: isFullscreen ? "100vh" : "auto",
         background: "linear-gradient(135deg, #0a0f1a 0%, #1a1f2e 100%)",
         color: "#ffffff",
-        padding: isFullscreen ? "3rem" : "1rem 1.5rem",
         position: "relative",
+        display: isFullscreen ? "flex" : "block",
+        flexDirection: isFullscreen ? "column" : undefined,
+        overflow: "hidden",
       }}
     >
-      {/* Header */}
-      {!isFullscreen && (
-        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          <h1
-            style={{
-              fontSize: isFullscreen ? "3rem" : "1.75rem",
-              fontWeight: "bold",
-              marginBottom: "0.5rem",
-              textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
-            }}
-          >
-            {match.team_a_name} vs {match.team_b_name}
-          </h1>
-          <div
-            style={{
-              display: "flex",
-              gap: "2rem",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            {match.match_type && (
-              <span
-                style={{
-                  fontSize: isFullscreen ? "1.25rem" : "0.875rem",
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                }}
-              >
-                {match.match_type}
-              </span>
-            )}
-            <span
+      <div
+        style={{
+          padding: isFullscreen ? "0.75rem 1.25rem" : "1rem 1.5rem",
+          flex: isFullscreen ? "1" : undefined,
+          overflow: isFullscreen ? "auto" : "visible",
+          display: "flex",
+          flexDirection: "column",
+          gap: isFullscreen ? "0.75rem" : "0",
+        }}
+      >
+        {/* Header */}
+        {!isFullscreen && (
+          <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+            <h1
               style={{
-                padding: "0.375rem 1rem",
-                borderRadius: "9999px",
-                fontSize: isFullscreen ? "1.25rem" : "0.875rem",
-                fontWeight: "600",
-                background:
-                  match.status === "Live"
-                    ? "rgba(239, 68, 68, 0.2)"
-                    : match.status === "Completed"
-                    ? "rgba(34, 197, 94, 0.2)"
-                    : "rgba(59, 130, 246, 0.2)",
-                color:
-                  match.status === "Live"
-                    ? "#fca5a5"
-                    : match.status === "Completed"
-                    ? "#86efac"
-                    : "#93c5fd",
+                fontSize: isFullscreen ? "3rem" : "1.75rem",
+                fontWeight: "bold",
+                marginBottom: "0.5rem",
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
               }}
             >
-              {match.status === "Live" && "🔴 "}
-              {match.status}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content */}
-      {!displayInnings ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            fontSize: isFullscreen ? "2rem" : "1.5rem",
-            color: "#94a3b8",
-          }}
-        >
-          {match.status === "Upcoming"
-            ? "Match hasn't started yet"
-            : "No score available"}
-        </div>
-      ) : (
-        <>
-          {/* Match Result (for completed matches) */}
-          {matchResult && (
+              {match.team_a_name} vs {match.team_b_name}
+            </h1>
             <div
               style={{
-                background: "rgba(34, 197, 94, 0.15)",
-                border: "2px solid rgba(34, 197, 94, 0.4)",
-                borderRadius: "1rem",
-                padding: "2rem",
-                marginBottom: "3rem",
-                textAlign: "center",
+                display: "flex",
+                gap: "2rem",
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
-              <div
-                style={{
-                  fontSize: isFullscreen ? "2.5rem" : "2rem",
-                  fontWeight: "bold",
-                  color: "#86efac",
-                }}
-              >
-                {matchResult}
-              </div>
-            </div>
-          )}
-
-          {/* Score Display */}
-          <div
-            style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              borderRadius: "1rem",
-              padding: isFullscreen ? "3rem" : "1.25rem",
-              marginBottom: "1.25rem",
-              border: "2px solid rgba(255, 255, 255, 0.1)",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: isFullscreen ? "2rem" : "1.125rem",
-                  color: "#94a3b8",
-                  marginBottom: "0.5rem",
-                  fontWeight: "600",
-                }}
-              >
-                {battingTeamName}
-              </div>
-              <div
-                style={{
-                  fontSize: isFullscreen ? "6rem" : "3.5rem",
-                  fontWeight: "bold",
-                  lineHeight: "1",
-                  marginBottom: "0.5rem",
-                  textShadow: "0 4px 8px rgba(0, 0, 0, 0.5)",
-                }}
-              >
-                {formatScore(displayInnings.total_runs, displayInnings.wickets)}
-              </div>
-              <div
-                style={{
-                  fontSize: isFullscreen ? "2.5rem" : "1.25rem",
-                  color: "#94a3b8",
-                  marginBottom: isSecondInnings ? "0.75rem" : "0",
-                }}
-              >
-                ({formatOvers(calculateOvers(displayInnings.balls_bowled))} /{" "}
-                {match.overs_per_innings} overs)
-              </div>
-
-              {/* Chase Information */}
-              {isSecondInnings && targetRuns && (
-                <div
+              {match.match_type && (
+                <span
                   style={{
-                    marginTop: "0.75rem",
-                    padding: "1rem",
-                    background: "rgba(59, 130, 246, 0.1)",
-                    borderRadius: "0.75rem",
-                    border: "1px solid rgba(59, 130, 246, 0.3)",
+                    fontSize: isFullscreen ? "1.25rem" : "0.875rem",
+                    color: "#94a3b8",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: isFullscreen ? "2rem" : "1.125rem",
-                      fontWeight: "600",
-                      color: "#93c5fd",
-                    }}
-                  >
-                    Need {runsNeeded} runs from {ballsRemaining} balls
-                  </div>
-                  {requiredRunRate && (
-                    <div
-                      style={{
-                        fontSize: isFullscreen ? "1.5rem" : "1rem",
-                        color: "#94a3b8",
-                        marginTop: "0.25rem",
-                      }}
-                    >
-                      Required Run Rate: {requiredRunRate}
-                    </div>
-                  )}
-                </div>
+                  {match.match_type}
+                </span>
               )}
+              <span
+                style={{
+                  padding: "0.375rem 1rem",
+                  borderRadius: "9999px",
+                  fontSize: isFullscreen ? "1.25rem" : "0.875rem",
+                  fontWeight: "600",
+                  background:
+                    match.status === "Live"
+                      ? "rgba(239, 68, 68, 0.2)"
+                      : match.status === "Completed"
+                      ? "rgba(34, 197, 94, 0.2)"
+                      : "rgba(59, 130, 246, 0.2)",
+                  color:
+                    match.status === "Live"
+                      ? "#fca5a5"
+                      : match.status === "Completed"
+                      ? "#86efac"
+                      : "#93c5fd",
+                }}
+              >
+                {match.status === "Live" && "🔴 "}
+                {match.status}
+              </span>
             </div>
           </div>
+        )}
 
-          {/* Current Partnership */}
-          {currentPartnership && match.status === "Live" && (
-            <div
-              style={{
-                background: "rgba(139, 92, 246, 0.1)",
-                border: "1px solid rgba(139, 92, 246, 0.3)",
-                borderRadius: "0.75rem",
-                padding: isFullscreen ? "2rem" : "1rem",
-                marginBottom: "1rem",
-              }}
-            >
+        {/* Main Content */}
+        {!displayInnings ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "4rem 2rem",
+              fontSize: isFullscreen ? "2rem" : "1.5rem",
+              color: "#94a3b8",
+            }}
+          >
+            {match.status === "Upcoming"
+              ? "Match hasn't started yet"
+              : "No score available"}
+          </div>
+        ) : (
+          <>
+            {/* Match Result (for completed matches) */}
+            {matchResult && (
               <div
                 style={{
-                  fontSize: isFullscreen ? "1.5rem" : "1rem",
-                  color: "#c4b5fd",
-                  marginBottom: "0.75rem",
-                  fontWeight: "600",
+                  background: "rgba(34, 197, 94, 0.15)",
+                  border: "2px solid rgba(34, 197, 94, 0.4)",
+                  borderRadius: "1rem",
+                  padding: "2rem",
+                  marginBottom: "3rem",
+                  textAlign: "center",
                 }}
               >
-                Current Partnership: {currentPartnership.runs} (
-                {currentPartnership.balls})
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "1rem",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontSize: isFullscreen ? "1.75rem" : "1rem",
-                      fontWeight: "600",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    {currentPartnership.striker.name}*
-                  </div>
-                  <div
-                    style={{
-                      fontSize: isFullscreen ? "2.5rem" : "1.5rem",
-                      fontWeight: "bold",
-                      color: "#a78bfa",
-                    }}
-                  >
-                    {currentPartnership.striker.runs} (
-                    {currentPartnership.striker.balls})
-                  </div>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: isFullscreen ? "1.75rem" : "1rem",
-                      fontWeight: "600",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    {currentPartnership.nonStriker.name}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: isFullscreen ? "2.5rem" : "1.5rem",
-                      fontWeight: "bold",
-                      color: "#a78bfa",
-                    }}
-                  >
-                    {currentPartnership.nonStriker.runs} (
-                    {currentPartnership.nonStriker.balls})
-                  </div>
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "2.5rem" : "2rem",
+                    fontWeight: "bold",
+                    color: "#86efac",
+                  }}
+                >
+                  {matchResult}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Current Over */}
-          {displayOverBalls.length > 0 && match.status === "Live" && (
+            {/* Score Display */}
             <div
               style={{
                 background: "rgba(255, 255, 255, 0.05)",
-                borderRadius: "0.75rem",
-                padding: isFullscreen ? "2rem" : "1rem",
-                marginBottom: "1rem",
+                borderRadius: "1rem",
+                padding: isFullscreen ? "3rem" : "1.25rem",
+                marginBottom: "1.25rem",
+                border: "2px solid rgba(255, 255, 255, 0.1)",
               }}
             >
-              <div
-                style={{
-                  fontSize: isFullscreen ? "1.5rem" : "1rem",
-                  color: "#94a3b8",
-                  marginBottom: "0.75rem",
-                  fontWeight: "600",
-                }}
-              >
-                This Over
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: isFullscreen ? "1rem" : "0.5rem",
-                  flexWrap: "wrap",
-                }}
-              >
-                {displayOverBalls.map((ball, index) => (
+              <div style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "2rem" : "1.125rem",
+                    color: "#94a3b8",
+                    marginBottom: "0.5rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  {battingTeamName}
+                </div>
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "3.5rem" : "3.5rem",
+                    fontWeight: "bold",
+                    lineHeight: "1",
+                    marginBottom: "0.5rem",
+                    textShadow: "0 4px 8px rgba(0, 0, 0, 0.5)",
+                  }}
+                >
+                  {formatScore(
+                    displayInnings.total_runs,
+                    displayInnings.wickets
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "1.25rem" : "1.25rem",
+                    color: "#94a3b8",
+                    marginBottom: isSecondInnings ? "0.75rem" : "0",
+                  }}
+                >
+                  ({formatOvers(calculateOvers(displayInnings.balls_bowled))} /{" "}
+                  {match.overs_per_innings} overs)
+                </div>
+
+                {/* Chase Information */}
+                {isSecondInnings && targetRuns && (
                   <div
-                    key={index}
                     style={{
-                      width: isFullscreen ? "4rem" : "2.5rem",
-                      height: isFullscreen ? "4rem" : "2.5rem",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: isFullscreen ? "1.75rem" : "1.5rem",
-                      fontWeight: "bold",
-                      background:
-                        ball === "W"
-                          ? "rgba(239, 68, 68, 0.3)"
-                          : ball === "6"
-                          ? "rgba(147, 51, 234, 0.3)"
-                          : ball === "4"
-                          ? "rgba(34, 197, 94, 0.3)"
-                          : "rgba(255, 255, 255, 0.1)",
-                      border:
-                        ball === "W"
-                          ? "2px solid #ef4444"
-                          : ball === "6"
-                          ? "2px solid #9333ea"
-                          : ball === "4"
-                          ? "2px solid #22c55e"
-                          : "2px solid rgba(255, 255, 255, 0.2)",
-                      color:
-                        ball === "W"
-                          ? "#fca5a5"
-                          : ball === "6"
-                          ? "#e9d5ff"
-                          : ball === "4"
-                          ? "#86efac"
-                          : "#ffffff",
+                      marginTop: "0.75rem",
+                      padding: "1rem",
+                      background: "rgba(59, 130, 246, 0.1)",
+                      borderRadius: "0.75rem",
+                      border: "1px solid rgba(59, 130, 246, 0.3)",
                     }}
                   >
-                    {ball}
+                    <div
+                      style={{
+                        fontSize: isFullscreen ? "1.125rem" : "1.125rem",
+                        fontWeight: "600",
+                        color: "#93c5fd",
+                      }}
+                    >
+                      Need {runsNeeded} runs from {ballsRemaining} balls
+                    </div>
+                    {requiredRunRate && (
+                      <div
+                        style={{
+                          fontSize: isFullscreen ? "0.875rem" : "1rem",
+                          color: "#94a3b8",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Required Run Rate: {requiredRunRate}
+                      </div>
+                    )}
                   </div>
-                ))}
+                )}
               </div>
             </div>
-          )}
 
-          {/* Current Bowler */}
-          {currentBowler && match.status === "Live" && (
-            <div
-              style={{
-                background: "rgba(249, 115, 22, 0.1)",
-                border: "1px solid rgba(249, 115, 22, 0.3)",
-                borderRadius: "0.75rem",
-                padding: isFullscreen ? "2rem" : "1rem",
-                marginBottom: "1rem",
-              }}
-            >
+            {/* Current Partnership */}
+            {currentPartnership && match.status === "Live" && (
               <div
                 style={{
-                  fontSize: isFullscreen ? "1.5rem" : "1rem",
-                  color: "#fdba74",
-                  marginBottom: "0.5rem",
-                  fontWeight: "600",
+                  background: "rgba(139, 92, 246, 0.1)",
+                  border: "1px solid rgba(139, 92, 246, 0.3)",
+                  borderRadius: "0.75rem",
+                  padding: isFullscreen ? "0.75rem" : "1rem",
+                  marginBottom: "1rem",
                 }}
               >
-                Current Bowler
-              </div>
-              <div
-                style={{
-                  fontSize: isFullscreen ? "2rem" : "1.25rem",
-                  fontWeight: "bold",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                {currentBowler.name}
-              </div>
-              <div
-                style={{
-                  fontSize: isFullscreen ? "1.75rem" : "1rem",
-                  color: "#94a3b8",
-                }}
-              >
-                {currentBowler.overs} overs • {currentBowler.wickets}-
-                {currentBowler.runs} • Econ: {currentBowler.economy}
-              </div>
-            </div>
-          )}
-
-          {/* Previous Innings (if second innings) */}
-          {completedInnings.length > 0 && match.status === "Live" && (
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "0.75rem",
-                padding: isFullscreen ? "2rem" : "1rem",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: isFullscreen ? "1.5rem" : "1rem",
-                  color: "#94a3b8",
-                  marginBottom: "0.75rem",
-                  fontWeight: "600",
-                }}
-              >
-                {completedInnings.length > 1
-                  ? "First Innings"
-                  : "Previous Innings"}
-              </div>
-              {completedInnings.map((inning) => (
                 <div
-                  key={inning.id}
+                  style={{
+                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    color: "#c4b5fd",
+                    marginBottom: "0.5rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  Current Partnership: {currentPartnership.runs} (
+                  {currentPartnership.balls})
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "1rem",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: isFullscreen ? "0.875rem" : "1rem",
+                        fontWeight: "600",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {currentPartnership.striker.name}*
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isFullscreen ? "1.5rem" : "1.5rem",
+                        fontWeight: "bold",
+                        color: "#a78bfa",
+                      }}
+                    >
+                      {currentPartnership.striker.runs} (
+                      {currentPartnership.striker.balls})
+                    </div>
+                  </div>
+                  <div>
+                    <div
+                      style={{
+                        fontSize: isFullscreen ? "0.875rem" : "1rem",
+                        fontWeight: "600",
+                        marginBottom: "0.25rem",
+                      }}
+                    >
+                      {currentPartnership.nonStriker.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: isFullscreen ? "1.5rem" : "1.5rem",
+                        fontWeight: "bold",
+                        color: "#a78bfa",
+                      }}
+                    >
+                      {currentPartnership.nonStriker.runs} (
+                      {currentPartnership.nonStriker.balls})
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Current Over */}
+            {displayOverBalls.length > 0 && match.status === "Live" && (
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  borderRadius: "0.75rem",
+                  padding: isFullscreen ? "0.75rem" : "1rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    color: "#94a3b8",
+                    marginBottom: "0.5rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  This Over
+                </div>
+                <div
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    gap: isFullscreen ? "1rem" : "0.5rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {displayOverBalls.map((ball, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        width: isFullscreen ? "2.5rem" : "2.5rem",
+                        height: isFullscreen ? "2.5rem" : "2.5rem",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: isFullscreen ? "1.25rem" : "1.5rem",
+                        fontWeight: "bold",
+                        background:
+                          ball === "W"
+                            ? "rgba(239, 68, 68, 0.3)"
+                            : ball === "6"
+                            ? "rgba(147, 51, 234, 0.3)"
+                            : ball === "4"
+                            ? "rgba(34, 197, 94, 0.3)"
+                            : "rgba(255, 255, 255, 0.1)",
+                        border:
+                          ball === "W"
+                            ? "2px solid #ef4444"
+                            : ball === "6"
+                            ? "2px solid #9333ea"
+                            : ball === "4"
+                            ? "2px solid #22c55e"
+                            : "2px solid rgba(255, 255, 255, 0.2)",
+                        color:
+                          ball === "W"
+                            ? "#fca5a5"
+                            : ball === "6"
+                            ? "#e9d5ff"
+                            : ball === "4"
+                            ? "#86efac"
+                            : "#ffffff",
+                      }}
+                    >
+                      {ball}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Current Bowler */}
+            {currentBowler && match.status === "Live" && (
+              <div
+                style={{
+                  background: "rgba(249, 115, 22, 0.1)",
+                  border: "1px solid rgba(249, 115, 22, 0.3)",
+                  borderRadius: "0.75rem",
+                  padding: isFullscreen ? "0.75rem" : "1rem",
+                  marginBottom: "1rem",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    color: "#fdba74",
+                    marginBottom: "0.5rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  Current Bowler
+                </div>
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "1.125rem" : "1.25rem",
+                    fontWeight: "bold",
                     marginBottom: "0.5rem",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: isFullscreen ? "1.5rem" : "1rem",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {inning.batting_team === "A"
-                      ? match.team_a_name
-                      : match.team_b_name}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: isFullscreen ? "1.75rem" : "1.125rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {formatScore(inning.total_runs, inning.wickets)} (
-                    {formatOvers(calculateOvers(inning.balls_bowled))})
-                  </span>
+                  {currentBowler.name}
                 </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    color: "#94a3b8",
+                  }}
+                >
+                  {currentBowler.overs} overs • {currentBowler.wickets}-
+                  {currentBowler.runs} • Econ: {currentBowler.economy}
+                </div>
+              </div>
+            )}
 
-      {/* Footer Info */}
-      {!isFullscreen && (
-        <div
-          style={{
-            position: "relative",
-            textAlign: "center",
-            marginTop: "1.5rem",
-            fontSize: "0.75rem",
-            color: "#64748b",
-          }}
-        >
-          {lastUpdate && (
-            <div>Last updated: {new Date(lastUpdate).toLocaleTimeString()}</div>
-          )}
-          <div style={{ marginTop: "0.25rem", opacity: 0.7 }}>
-            Auto-refreshing every 3 seconds
+            {/* Previous Innings (if second innings) */}
+            {completedInnings.length > 0 && match.status === "Live" && (
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "0.75rem",
+                  padding: isFullscreen ? "0.75rem" : "1rem",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    color: "#94a3b8",
+                    marginBottom: "0.5rem",
+                    fontWeight: "600",
+                  }}
+                >
+                  {completedInnings.length > 1
+                    ? "First Innings"
+                    : "Previous Innings"}
+                </div>
+                {completedInnings.map((inning) => (
+                  <div
+                    key={inning.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: isFullscreen ? "0.875rem" : "1rem",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {inning.batting_team === "A"
+                        ? match.team_a_name
+                        : match.team_b_name}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: isFullscreen ? "1rem" : "1.125rem",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {formatScore(inning.total_runs, inning.wickets)} (
+                      {formatOvers(calculateOvers(inning.balls_bowled))})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Footer Info */}
+        {!isFullscreen && (
+          <div
+            style={{
+              position: "relative",
+              textAlign: "center",
+              marginTop: "1.5rem",
+              fontSize: "0.75rem",
+              color: "#64748b",
+            }}
+          >
+            {lastUpdate && (
+              <div>
+                Last updated: {new Date(lastUpdate).toLocaleTimeString()}
+              </div>
+            )}
+            <div style={{ marginTop: "0.25rem", opacity: 0.7 }}>
+              Auto-refreshing every 3 seconds
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Fullscreen Toggle Button (Bottom Right Corner) */}
       <button
