@@ -61,28 +61,31 @@ async function DisplayPageContent({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const match = await getMatchById(id);
+
+  // Parallelize independent queries for faster page loads
+  const [match, players, currentInnings, allInnings] = await Promise.all([
+    getMatchById(id),
+    getPlayersByMatch(id),
+    getCurrentInnings(id),
+    getAllInnings(id),
+  ]);
 
   if (!match) {
     notFound();
   }
-
-  const players = await getPlayersByMatch(id);
-  const currentInnings = await getCurrentInnings(id);
-  const allInnings = await getAllInnings(id);
   const completedInnings = allInnings.filter((i) => i.is_completed);
   const firstCompletedInnings = completedInnings[0];
 
   const displayInnings =
     currentInnings || completedInnings[completedInnings.length - 1] || null;
 
-  const recentBalls = displayInnings
-    ? await getRecentBalls(displayInnings.id)
-    : [];
-
-  const inningsDetail = displayInnings
-    ? await getInningsWithBalls(displayInnings.id)
-    : null;
+  // Parallelize displayInnings-dependent queries
+  const [recentBalls, inningsDetail] = displayInnings
+    ? await Promise.all([
+        getRecentBalls(displayInnings.id),
+        getInningsWithBalls(displayInnings.id),
+      ])
+    : [[], null];
 
   // Second innings chase information
   const isSecondInnings =

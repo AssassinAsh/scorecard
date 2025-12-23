@@ -174,7 +174,9 @@ CREATE INDEX idx_innings_match_completed ON innings(match_id, is_completed);
 CREATE INDEX idx_overs_innings ON overs(innings_id);
 CREATE INDEX idx_balls_over ON balls(over_id);
 CREATE INDEX idx_balls_over_extras ON balls(over_id, extras_type);
+CREATE INDEX idx_balls_over_legal ON balls(over_id, extras_type) WHERE extras_type NOT IN ('Wide', 'NoBall');
 CREATE INDEX idx_balls_created ON balls(created_at DESC);
+CREATE INDEX idx_players_match_team ON players(match_id, team);
 CREATE INDEX idx_retirements_innings ON retirements(innings_id);
 
 -- =====================

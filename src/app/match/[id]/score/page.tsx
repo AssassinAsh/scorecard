@@ -48,15 +48,18 @@ export default async function ScoringPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const match = await getMatchById(id);
+
+  // Parallelize independent queries for faster page loads
+  const [match, players, currentInnings, allInnings] = await Promise.all([
+    getMatchById(id),
+    getPlayersByMatch(id),
+    getCurrentInnings(id),
+    getAllInnings(id),
+  ]);
 
   if (!match) {
     notFound();
   }
-
-  const players = await getPlayersByMatch(id);
-  const currentInnings = await getCurrentInnings(id);
-  const allInnings = await getAllInnings(id);
   const completedInnings = allInnings.filter((i) => i.is_completed);
   const firstCompletedInnings = completedInnings[0];
 
@@ -74,17 +77,14 @@ export default async function ScoringPage({
   const displayInnings =
     currentInnings || completedInnings[completedInnings.length - 1] || null;
 
-  const recentBalls = displayInnings
-    ? await getRecentBalls(displayInnings.id)
-    : [];
-
-  const inningsDetail = displayInnings
-    ? await getInningsWithBalls(displayInnings.id)
-    : null;
-
-  const retirements = displayInnings
-    ? await getRetirementsForInnings(displayInnings.id)
-    : [];
+  // Parallelize displayInnings-dependent queries
+  const [recentBalls, inningsDetail, retirements] = displayInnings
+    ? await Promise.all([
+        getRecentBalls(displayInnings.id),
+        getInningsWithBalls(displayInnings.id),
+        getRetirementsForInnings(displayInnings.id),
+      ])
+    : [[], null, []];
 
   const firstInnings = allInnings[0] || null;
   const firstInningsTeam: "A" | "B" | null = firstInnings
