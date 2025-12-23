@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
@@ -21,7 +20,6 @@ import {
 } from "@/lib/cricket/scoring";
 import ScoringInterface from "@/components/ScoringInterface";
 import AutoRefresh from "@/components/AutoRefresh";
-import InningsButton from "@/components/InningsButton";
 import { hasAccess, isAdmin } from "@/app/actions/tournaments";
 import { MatchSkeleton } from "@/components/Skeletons";
 import MatchHeader from "@/components/MatchHeader";

@@ -10,6 +10,7 @@ interface NewOverModalProps {
   ballsBowled: number;
   newOverBowlerId: string;
   bowlingPlayers: Player[];
+  isStartingOver: boolean;
 
   onBowlerChange: (id: string) => void;
   onAddPlayer: () => void;
@@ -22,6 +23,7 @@ export function NewOverModal({
   ballsBowled,
   newOverBowlerId,
   bowlingPlayers,
+  isStartingOver,
   onBowlerChange,
   onAddPlayer,
   onConfirm,
@@ -80,11 +82,11 @@ export function NewOverModal({
         <div className="flex gap-2">
           <button
             onClick={onConfirm}
-            disabled={!newOverBowlerId}
+            disabled={!newOverBowlerId || isStartingOver}
             className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "var(--accent)" }}
           >
-            Start Over
+            {isStartingOver ? "Starting..." : "Start Over"}
           </button>
           <button
             onClick={onCancel}

@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import TeamEditDialog from "./TeamEditDialog";
 import TossDialog from "./TossDialog";
+import { startInnings } from "@/app/actions/scoring";
+import { updateMatchStatus } from "@/app/actions/matches";
 import type { TeamSide, TossDecision } from "@/types";
 
 interface MatchHeaderProps {
@@ -40,6 +43,8 @@ export default function MatchHeader({
 }: MatchHeaderProps) {
   const [editingTeam, setEditingTeam] = useState<"A" | "B" | null>(null);
   const [showTossDialog, setShowTossDialog] = useState(false);
+  const [isStartingFirstInnings, setIsStartingFirstInnings] = useState(false);
+  const router = useRouter();
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return null;
@@ -49,6 +54,35 @@ export default function MatchHeader({
       month: "short",
       year: "numeric",
     });
+  };
+
+  const handleStartFirstInnings = async () => {
+    if (!tossWinner || !tossDecision) {
+      alert("Please record the toss before starting the match.");
+      return;
+    }
+    if (isStartingFirstInnings) return;
+
+    setIsStartingFirstInnings(true);
+    try {
+      const battingTeam =
+        tossDecision === "Bat" ? tossWinner : tossWinner === "A" ? "B" : "A";
+      const bowlingTeam = battingTeam === "A" ? "B" : "A";
+
+      await updateMatchStatus(match.id, "Live");
+      const result = await startInnings(match.id, battingTeam, bowlingTeam);
+
+      if (!result || ("error" in result && result.error)) {
+        alert("Failed to start innings");
+        setIsStartingFirstInnings(false);
+        return;
+      }
+
+      router.push(`/match/${match.id}/score`);
+    } catch (error) {
+      alert("Error starting match: " + error);
+      setIsStartingFirstInnings(false);
+    }
   };
 
   return (
@@ -119,6 +153,16 @@ export default function MatchHeader({
                 {hasTossData ? "Update Toss" : "Complete Toss"}
               </button>
             )}
+            {showScorerActions && match.status === "Starting Soon" && (
+              <button
+                onClick={handleStartFirstInnings}
+                disabled={isStartingFirstInnings}
+                className="px-3 py-1.5 rounded-md font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "var(--accent)" }}
+              >
+                {isStartingFirstInnings ? "Starting..." : "Start First Innings"}
+              </button>
+            )}
             {showScorerActions &&
               (match.status === "Live" || match.status === "Innings Break") && (
                 <Link
@@ -126,7 +170,9 @@ export default function MatchHeader({
                   className="px-3 py-1.5 rounded-md font-medium text-white"
                   style={{ background: "var(--accent)" }}
                 >
-                  Live Scoring
+                  {match.status === "Live"
+                    ? "Score Live"
+                    : "Start Second Innings"}
                 </Link>
               )}
             {(match.status === "Live" ||

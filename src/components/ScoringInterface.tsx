@@ -26,6 +26,7 @@ import BallActionModal from "./scoring/BallActionModal";
 import WicketModal from "./scoring/WicketModal";
 import ScoringControls from "./scoring/ScoringControls";
 import AddPlayerModal from "./scoring/AddPlayerModal";
+import SelectBatterModal from "./scoring/SelectBatterModal";
 import {
   NewOverModal,
   DeleteBallModal,
@@ -192,6 +193,14 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     "striker" | "nonStriker" | "bowler" | "keeper" | "fielder"
   >("striker");
 
+  // Select existing batter vs add new
+  const [showSelectBatterModal, setShowSelectBatterModal] = useState(false);
+  const [selectBatterFor, setSelectBatterFor] = useState<
+    "striker" | "nonStriker"
+  >("striker");
+  const [selectedExistingBatterId, setSelectedExistingBatterId] =
+    useState<string>("");
+
   // Ball action modal
   const [showActionModal, setShowActionModal] = useState(false);
   const [currentAction, setCurrentAction] = useState<BallAction>(null);
@@ -224,6 +233,7 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isAddingNewOverBowler, setIsAddingNewOverBowler] = useState(false);
   const [isSavingPlayer, setIsSavingPlayer] = useState(false);
+  const [isStartingOver, setIsStartingOver] = useState(false);
 
   // Undo / strike change modals
   const [showDeleteLastBallModal, setShowDeleteLastBallModal] = useState(false);
@@ -477,12 +487,14 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     // Clear retired batter from strike if needed and prompt a replacement batter
     if (retirePlayerId === strikerId) {
       setStrikerId("");
-      setAddingPlayerFor("striker");
-      setShowAddPlayer(true);
+      setSelectBatterFor("striker");
+      setSelectedExistingBatterId("");
+      setShowSelectBatterModal(true);
     } else if (retirePlayerId === nonStrikerId) {
       setNonStrikerId("");
-      setAddingPlayerFor("nonStriker");
-      setShowAddPlayer(true);
+      setSelectBatterFor("nonStriker");
+      setSelectedExistingBatterId("");
+      setShowSelectBatterModal(true);
     }
 
     setShowRetireModal(false);
@@ -550,31 +562,36 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
       );
       return;
     }
+    setIsStartingOver(true);
 
-    const overNumber = Math.floor(ballsBowled / 6) + 1;
-    const result = await startNewOver(inningsId, overNumber, newOverBowlerId);
+    try {
+      const overNumber = Math.floor(ballsBowled / 6) + 1;
+      const result = await startNewOver(inningsId, overNumber, newOverBowlerId);
 
-    if (result?.error) {
-      alert(result.error);
-      return;
-    }
-
-    if (result?.data) {
-      setBowlerId(newOverBowlerId);
-      setCurrentOverId(result.data.id);
-      hasSetNewOver.current = true;
-
-      // Rotate strike at end of over (only if this is not the first over)
-      if (ballsBowled > 0) {
-        const temp = strikerId;
-        setStrikerId(nonStrikerId);
-        setNonStrikerId(temp);
+      if (result?.error) {
+        alert(result.error);
+        return;
       }
 
-      setShowNewOverModal(false);
-      setNewOverBowlerId("");
-    } else {
-      alert("Could not start new over");
+      if (result?.data) {
+        setBowlerId(newOverBowlerId);
+        setCurrentOverId(result.data.id);
+        hasSetNewOver.current = true;
+
+        // Rotate strike at end of over (only if this is not the first over)
+        if (ballsBowled > 0) {
+          const temp = strikerId;
+          setStrikerId(nonStrikerId);
+          setNonStrikerId(temp);
+        }
+
+        setShowNewOverModal(false);
+        setNewOverBowlerId("");
+      } else {
+        alert("Could not start new over");
+      }
+    } finally {
+      setIsStartingOver(false);
     }
   };
 
@@ -677,9 +694,25 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
 
         // If wicket, prompt for new batsman
         if (isWicket) {
-          setStrikerId("");
-          setAddingPlayerFor("striker");
-          setShowAddPlayer(true);
+          if (wicketType === "RunOut" && runOutBatsmanId) {
+            if (runOutBatsmanId === strikerId) {
+              setStrikerId("");
+              setSelectBatterFor("striker");
+            } else if (runOutBatsmanId === nonStrikerId) {
+              setNonStrikerId("");
+              setSelectBatterFor("nonStriker");
+            } else {
+              // Fallback: treat as striker out if IDs don't match
+              setStrikerId("");
+              setSelectBatterFor("striker");
+            }
+          } else {
+            // Non-run-out wickets always dismiss the striker
+            setStrikerId("");
+            setSelectBatterFor("striker");
+          }
+          setSelectedExistingBatterId("");
+          setShowSelectBatterModal(true);
         }
 
         // Clear free hit after this ball (if it wasn't a no ball)
@@ -829,6 +862,40 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         />
       )}
 
+      {/* Select Existing Batter Modal (after wicket/retire) */}
+      {!readOnly && (
+        <SelectBatterModal
+          show={showSelectBatterModal}
+          role={selectBatterFor}
+          battingPlayers={battingPlayers}
+          dismissedPlayerIds={dismissedPlayerIds}
+          retiredPlayerIds={retiredPlayerIds}
+          strikerId={strikerId}
+          nonStrikerId={nonStrikerId}
+          selectedBatterId={selectedExistingBatterId}
+          onSelectedBatterChange={setSelectedExistingBatterId}
+          onUseExisting={() => {
+            if (!selectedExistingBatterId) return;
+            if (selectBatterFor === "striker") {
+              setStrikerId(selectedExistingBatterId);
+            } else {
+              setNonStrikerId(selectedExistingBatterId);
+            }
+            setShowSelectBatterModal(false);
+            setSelectedExistingBatterId("");
+          }}
+          onAddNew={() => {
+            setAddingPlayerFor(selectBatterFor);
+            setShowSelectBatterModal(false);
+            setShowAddPlayer(true);
+          }}
+          onCancel={() => {
+            setShowSelectBatterModal(false);
+            setSelectedExistingBatterId("");
+          }}
+        />
+      )}
+
       {/* Ball Action Modal */}
       {!readOnly && (
         <BallActionModal
@@ -918,6 +985,7 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
             ballsBowled={ballsBowled}
             newOverBowlerId={newOverBowlerId}
             bowlingPlayers={bowlingPlayers}
+            isStartingOver={isStartingOver}
             onBowlerChange={setNewOverBowlerId}
             onAddPlayer={() => {
               setAddingPlayerFor("bowler");

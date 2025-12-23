@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { getUser, logout } from "@/app/actions/auth";
 import LoginDialog from "./LoginDialog";
+import BackButton from "./BackButton";
 
 export default async function AppHeader() {
   const user = await getUser();
@@ -8,13 +8,7 @@ export default async function AppHeader() {
   return (
     <header className="cricket-card sticky top-0 z-20 border-b">
       <div className="max-w-4xl mx-auto px-4 py-3 sm:px-6 flex items-center justify-between gap-4">
-        <Link
-          href="/"
-          className="text-sm hover:underline shrink-0"
-          style={{ color: "var(--accent)" }}
-        >
-          ← Back
-        </Link>
+        <BackButton />
 
         <h1 className="text-xl sm:text-2xl font-medium team-name truncate text-center flex-1">
           🏏 Cricket Scorecard
