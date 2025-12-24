@@ -208,8 +208,8 @@ export default function ScoreDisplay({
         </p>
       )}
 
-      {/* Batsmen Details (scorer view only; hidden in read-only/public) */}
-      {!readOnly && strikerName && (
+      {/* Batsmen Details - show for both scorer and public view */}
+      {strikerName && (
         <div className="space-y-1.5 mb-3 text-sm">
           <div className="flex justify-between">
             <span className="font-medium">{strikerName} *</span>
@@ -232,8 +232,8 @@ export default function ScoreDisplay({
         </div>
       )}
 
-      {/* Bowler Details (scorer view only; hidden in read-only/public) */}
-      {!readOnly && bowlerName && (
+      {/* Bowler Details - show for both scorer and public view */}
+      {bowlerName && (
         <div
           className="pt-2 border-t text-sm"
           style={{ borderColor: "var(--border)" }}
