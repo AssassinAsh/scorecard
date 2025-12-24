@@ -72,7 +72,7 @@ export default function FullScorecard({
   strikerId,
   nonStrikerId,
 }: FullScorecardProps) {
-  const [showScorecard, setShowScorecard] = useState(false);
+  const [showScorecard, setShowScorecard] = useState(true);
   const [activeScorecardTeam, setActiveScorecardTeam] = useState<"A" | "B">(
     battingTeam
   );

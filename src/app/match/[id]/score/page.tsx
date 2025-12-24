@@ -24,6 +24,7 @@ import {
   buildDismissalMap,
   formatStrikeRate,
   formatEconomy,
+  getBattingAppearanceOrder,
 } from "@/lib/cricket/stats";
 import ScoringInterface from "@/components/ScoringInterface";
 import InningsButton from "@/components/InningsButton";
@@ -209,9 +210,21 @@ export default async function ScoringPage({
       retirementMap.set(r.player_id, r.reason);
     }
 
+    const battingAppearanceOrder = getBattingAppearanceOrder(inningsDetail);
+
     liveBatting = battingPlayersForInnings
       .slice()
-      .sort((a, b) => a.batting_order - b.batting_order)
+      .sort((a, b) => {
+        const orderA = battingAppearanceOrder.get(a.id);
+        const orderB = battingAppearanceOrder.get(b.id);
+
+        if (orderA !== undefined && orderB !== undefined) {
+          return orderA - orderB;
+        }
+        if (orderA !== undefined) return -1;
+        if (orderB !== undefined) return 1;
+        return a.batting_order - b.batting_order;
+      })
       .map((player) => {
         const s =
           battingStatsMap.get(player.id) ||
@@ -290,9 +303,22 @@ export default async function ScoringPage({
         )
       );
 
+      const firstBattingAppearanceOrder =
+        getBattingAppearanceOrder(firstDetail);
+
       firstInningsBatting = battingPlayersForFirst
         .slice()
-        .sort((a, b) => a.batting_order - b.batting_order)
+        .sort((a, b) => {
+          const orderA = firstBattingAppearanceOrder.get(a.id);
+          const orderB = firstBattingAppearanceOrder.get(b.id);
+
+          if (orderA !== undefined && orderB !== undefined) {
+            return orderA - orderB;
+          }
+          if (orderA !== undefined) return -1;
+          if (orderB !== undefined) return 1;
+          return a.batting_order - b.batting_order;
+        })
         .map((player) => {
           const s =
             firstBattingStats.get(player.id) ||

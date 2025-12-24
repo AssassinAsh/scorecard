@@ -20,6 +20,7 @@ import {
   buildDismissalMap,
   formatStrikeRate,
   formatEconomy,
+  getBattingAppearanceOrder,
 } from "@/lib/cricket/stats";
 import RealtimeRefresh from "@/components/RealtimeRefresh";
 import FullscreenDisplay from "@/components/FullscreenDisplay";
@@ -134,9 +135,21 @@ async function DisplayPageContent({
     const battingStatsMap = calculateBattingStats(inningsDetail);
     const bowlingStatsMap = calculateBowlingStats(inningsDetail);
 
+    const battingAppearanceOrder = getBattingAppearanceOrder(inningsDetail);
+
     liveBatting = battingPlayers
       .slice()
-      .sort((a, b) => a.batting_order - b.batting_order)
+      .sort((a, b) => {
+        const orderA = battingAppearanceOrder.get(a.id);
+        const orderB = battingAppearanceOrder.get(b.id);
+
+        if (orderA !== undefined && orderB !== undefined) {
+          return orderA - orderB;
+        }
+        if (orderA !== undefined) return -1;
+        if (orderB !== undefined) return 1;
+        return a.batting_order - b.batting_order;
+      })
       .map((player) => {
         const s = battingStatsMap.get(player.id) || {
           runs: 0,

@@ -25,6 +25,7 @@ export type InningsWithOvers = {
     bowler_id: string | null;
     balls?: Array<{
       striker_id: string;
+      non_striker_id?: string;
       runs_off_bat: number;
       extras_type: string;
       extras_runs: number;
@@ -256,4 +257,40 @@ export function formatStrikeRate(runs: number, balls: number): string {
 export function formatEconomy(runs: number, legalBalls: number): string {
   if (legalBalls === 0) return "-";
   return ((runs * 6) / legalBalls).toFixed(2);
+}
+
+/**
+ * Get batting appearance order - tracks the actual order players came to bat
+ * This is critical for correct scorecard display, especially in second innings
+ * where a player who bowled first (batting_order=1) might bat at position 5
+ *
+ * Tracks BOTH striker and non-striker to capture the exact moment each player
+ * came to the crease, regardless of who is facing the ball
+ */
+export function getBattingAppearanceOrder(
+  inningsDetail: InningsWithOvers
+): Map<string, number> {
+  const appearanceOrder = new Map<string, number>();
+
+  if (!inningsDetail.overs) return appearanceOrder;
+
+  let index = 0;
+  for (const over of inningsDetail.overs) {
+    const overBalls = over.balls || [];
+    for (const ball of overBalls) {
+      // Track striker
+      const strikerId = ball.striker_id;
+      if (!appearanceOrder.has(strikerId)) {
+        appearanceOrder.set(strikerId, index++);
+      }
+
+      // Track non-striker (they're also at the crease)
+      const nonStrikerId = ball.non_striker_id;
+      if (nonStrikerId && !appearanceOrder.has(nonStrikerId)) {
+        appearanceOrder.set(nonStrikerId, index++);
+      }
+    }
+  }
+
+  return appearanceOrder;
 }

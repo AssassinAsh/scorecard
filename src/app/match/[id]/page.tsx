@@ -25,6 +25,7 @@ import {
   buildDismissalMap,
   formatStrikeRate,
   formatEconomy,
+  getBattingAppearanceOrder,
 } from "@/lib/cricket/stats";
 import ScoringInterface from "@/components/ScoringInterface";
 import RealtimeRefresh from "@/components/RealtimeRefresh";
@@ -181,9 +182,25 @@ async function MatchPageContent({
       retirementMap.set(r.player_id, r.reason);
     }
 
+    // Get actual batting appearance order (critical for correct scorecard)
+    const battingAppearanceOrder = getBattingAppearanceOrder(inningsDetail);
+
     liveBatting = battingPlayersForInnings
       .slice()
-      .sort((a, b) => a.batting_order - b.batting_order)
+      .sort((a, b) => {
+        const orderA = battingAppearanceOrder.get(a.id);
+        const orderB = battingAppearanceOrder.get(b.id);
+
+        // Both have batted: sort by appearance
+        if (orderA !== undefined && orderB !== undefined) {
+          return orderA - orderB;
+        }
+        // Only one has batted: they come first
+        if (orderA !== undefined) return -1;
+        if (orderB !== undefined) return 1;
+        // Neither has batted: use batting_order
+        return a.batting_order - b.batting_order;
+      })
       .map((player) => {
         const s =
           battingStatsMap.get(player.id) ||
@@ -455,9 +472,22 @@ async function MatchPageContent({
         )
       );
 
+      const firstBattingAppearanceOrder =
+        getBattingAppearanceOrder(firstDetail);
+
       firstInningsBatting = battingPlayersForFirst
         .slice()
-        .sort((a, b) => a.batting_order - b.batting_order)
+        .sort((a, b) => {
+          const orderA = firstBattingAppearanceOrder.get(a.id);
+          const orderB = firstBattingAppearanceOrder.get(b.id);
+
+          if (orderA !== undefined && orderB !== undefined) {
+            return orderA - orderB;
+          }
+          if (orderA !== undefined) return -1;
+          if (orderB !== undefined) return 1;
+          return a.batting_order - b.batting_order;
+        })
         .map((player) => {
           const s =
             firstBattingStats.get(player.id) ||
