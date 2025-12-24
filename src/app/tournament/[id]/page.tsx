@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import {
   getTournamentById,
@@ -7,10 +6,10 @@ import {
 } from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { createClient } from "@/lib/supabase/server";
-import DashboardMatchCard from "@/components/DashboardMatchCard";
 import Footer from "@/components/Footer";
 import NewMatchButton from "@/components/NewMatchButton";
 import { TournamentSkeleton } from "@/components/Skeletons";
+import TournamentMatchList from "@/components/TournamentMatchList";
 
 export default function TournamentPage(props: {
   params: Promise<{ id: string }>;
@@ -167,93 +166,11 @@ async function TournamentPageContent({
           {hasScorerAccess && <NewMatchButton tournamentId={id} />}
         </div>
 
-        {matches.length === 0 ? (
-          <div
-            className="cricket-card rounded-lg p-6 text-center"
-            style={{
-              background: "var(--card-bg)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            <p className="muted-text">No matches scheduled yet</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {matchesWithResult.map(({ match, winnerText }) =>
-              user ? (
-                <DashboardMatchCard
-                  key={match.id}
-                  match={match}
-                  isAdmin={admin}
-                  winnerText={winnerText}
-                />
-              ) : (
-                <Link
-                  key={match.id}
-                  href={`/match/${match.id}`}
-                  className="cricket-card block rounded-lg p-4"
-                  style={{
-                    background: "var(--card-bg)",
-                    border: "1px solid var(--border)",
-                  }}
-                >
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-medium team-name truncate">
-                        {match.team_a_name} vs {match.team_b_name}
-                      </h3>
-                      <p className="text-sm muted-text mt-1">
-                        {new Date(match.match_date).toLocaleDateString(
-                          "en-US",
-                          {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          }
-                        )}{" "}
-                        • {match.overs_per_innings} overs
-                      </p>
-                      {winnerText && (
-                        <p
-                          className="text-sm mt-2 font-medium"
-                          style={{ color: "var(--success)" }}
-                        >
-                          {winnerText}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <span
-                        className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap inline-block"
-                        style={{
-                          background:
-                            match.status === "Live"
-                              ? "rgba(234, 67, 53, 0.1)"
-                              : match.status === "Completed"
-                              ? "rgba(52, 168, 83, 0.1)"
-                              : "rgba(128, 134, 139, 0.1)",
-                          color:
-                            match.status === "Live"
-                              ? "var(--danger)"
-                              : match.status === "Completed"
-                              ? "var(--success)"
-                              : "var(--muted)",
-                        }}
-                      >
-                        {match.status}
-                      </span>
-                      {match.match_type && (
-                        <div className="mt-1 text-[11px] font-medium uppercase tracking-wide muted-text">
-                          {match.match_type}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              )
-            )}
-          </div>
-        )}
+        <TournamentMatchList
+          matches={matchesWithResult}
+          user={user}
+          isAdmin={admin}
+        />
       </main>
       <Footer />
     </div>
