@@ -27,7 +27,7 @@ import {
   formatEconomy,
 } from "@/lib/cricket/stats";
 import ScoringInterface from "@/components/ScoringInterface";
-import AutoRefresh from "@/components/AutoRefresh";
+import RealtimeRefresh from "@/components/RealtimeRefresh";
 import { hasAccess, isAdmin } from "@/app/actions/tournaments";
 import { MatchSkeleton } from "@/components/Skeletons";
 import MatchHeader from "@/components/MatchHeader";
@@ -610,12 +610,10 @@ async function MatchPageContent({
         )}
       </main>
 
-      {/* Auto-refresh every 5 seconds for public viewers (not logged-in scorers) */}
-      <AutoRefresh
-        enabled={
-          !user && (match.status === "Live" || match.status === "Innings Break")
-        }
-        intervalMs={5000}
+      {/* Real-time updates for all users viewing live matches */}
+      <RealtimeRefresh
+        matchId={id}
+        enabled={match.status === "Live" || match.status === "Innings Break"}
       />
     </div>
   );

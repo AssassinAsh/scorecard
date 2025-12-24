@@ -27,6 +27,7 @@ import {
 } from "@/lib/cricket/stats";
 import ScoringInterface from "@/components/ScoringInterface";
 import InningsButton from "@/components/InningsButton";
+import RealtimeRefresh from "@/components/RealtimeRefresh";
 
 type LiveBattingRow = {
   playerId: string;
@@ -481,6 +482,13 @@ export default async function ScoringPage({
           </Link>
         </div>
       </main>
+
+      {/* Real-time updates with input suppression for scorers */}
+      <RealtimeRefresh
+        matchId={id}
+        enabled={match.status === "Live" || match.status === "Innings Break"}
+        suppressDuringInput={true}
+      />
     </div>
   );
 }

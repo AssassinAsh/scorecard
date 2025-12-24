@@ -168,7 +168,7 @@ scorecard/
 │   ├── components/               # Reusable React components
 │   │   ├── ScoringInterface.tsx  # Main scoring UI
 │   │   ├── TossForm.tsx          # Toss configuration
-│   │   ├── AutoRefresh.tsx       # Auto-refresh for public view
+│   │   ├── RealtimeRefresh.tsx   # Real-time WebSocket updates
 │   │   └── ...
 │   ├── lib/
 │   │   ├── cricket/

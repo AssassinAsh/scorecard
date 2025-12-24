@@ -21,7 +21,7 @@ import {
   formatStrikeRate,
   formatEconomy,
 } from "@/lib/cricket/stats";
-import AutoRefresh from "@/components/AutoRefresh";
+import RealtimeRefresh from "@/components/RealtimeRefresh";
 import FullscreenDisplay from "@/components/FullscreenDisplay";
 
 type LiveBattingRow = {
@@ -320,10 +320,10 @@ async function DisplayPageContent({
         matchResult={matchResult}
       />
 
-      {/* Auto-refresh every 3 seconds for live matches */}
-      <AutoRefresh
+      {/* Real-time updates for live matches */}
+      <RealtimeRefresh
+        matchId={id}
         enabled={match.status === "Live" || match.status === "Innings Break"}
-        intervalMs={3000}
       />
     </>
   );
