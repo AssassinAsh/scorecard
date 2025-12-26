@@ -9,7 +9,7 @@ import {
   updateOverBowler,
   unretireBatsman,
 } from "@/app/actions/scoring";
-import { createPlayer } from "@/app/actions/matches";
+import { createPlayer, updatePlayerName } from "@/app/actions/matches";
 import {
   calculateRunRate,
   calculateRequiredRunRate,
@@ -33,6 +33,7 @@ import {
   DeleteBallModal,
   ChangeStrikeModal,
   RetireModal,
+  EditPlayerNamesModal,
   ChangePlayerModal,
 } from "./scoring/UtilityModals";
 
@@ -249,6 +250,13 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   >(null);
   const [isRetiring, setIsRetiring] = useState(false);
 
+  // Edit player names modal
+  const [showEditNamesModal, setShowEditNamesModal] = useState(false);
+  const [editStrikerName, setEditStrikerName] = useState("");
+  const [editNonStrikerName, setEditNonStrikerName] = useState("");
+  const [editBowlerName, setEditBowlerName] = useState("");
+  const [isUpdatingNames, setIsUpdatingNames] = useState(false);
+
   // Change player modal (for updating striker, non-striker, or bowler mid-innings)
   const [showChangePlayerModal, setShowChangePlayerModal] = useState(false);
   const [tempStrikerId, setTempStrikerId] = useState<string>("");
@@ -361,6 +369,52 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const strikerStats = liveBatting.find((b) => b.playerId === strikerId);
   const nonStrikerStats = liveBatting.find((b) => b.playerId === nonStrikerId);
   const bowlerStats = liveBowling.find((b) => b.playerId === bowlerId);
+
+  const handleOpenEditNames = () => {
+    setEditStrikerName(strikerName || "");
+    setEditNonStrikerName(nonStrikerName || "");
+    setEditBowlerName(bowlerName || "");
+    setShowEditNamesModal(true);
+  };
+
+  const handleSavePlayerNames = async () => {
+    setIsUpdatingNames(true);
+
+    try {
+      const tasks: Promise<{ data: any | null; error?: string }>[] = [];
+
+      const trimmedStriker = editStrikerName.trim();
+      const trimmedNonStriker = editNonStrikerName.trim();
+      const trimmedBowler = editBowlerName.trim();
+
+      if (strikerId && trimmedStriker && trimmedStriker !== strikerName) {
+        tasks.push(updatePlayerName(matchId, strikerId, trimmedStriker));
+      }
+      if (
+        nonStrikerId &&
+        trimmedNonStriker &&
+        trimmedNonStriker !== nonStrikerName
+      ) {
+        tasks.push(updatePlayerName(matchId, nonStrikerId, trimmedNonStriker));
+      }
+      if (bowlerId && trimmedBowler && trimmedBowler !== bowlerName) {
+        tasks.push(updatePlayerName(matchId, bowlerId, trimmedBowler));
+      }
+
+      for (const task of tasks) {
+        const result = await task;
+        if (result.error) {
+          alert(result.error);
+          setIsUpdatingNames(false);
+          return;
+        }
+      }
+
+      setShowEditNamesModal(false);
+    } finally {
+      setIsUpdatingNames(false);
+    }
+  };
 
   // Handle adding new player
   const handleAddPlayer = async () => {
@@ -781,6 +835,7 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         nonStrikerStats={nonStrikerStats || null}
         bowlerName={bowlerName}
         bowlerStats={bowlerStats || null}
+        onEditCurrentPlayers={!readOnly ? handleOpenEditNames : undefined}
       />
 
       {/* Current Over Display */}
@@ -1071,6 +1126,21 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
               setRetiringPlayerRole(null);
               setIsRetiring(false);
             }}
+          />
+
+          <EditPlayerNamesModal
+            show={showEditNamesModal}
+            strikerName={editStrikerName}
+            nonStrikerName={editNonStrikerName}
+            bowlerName={editBowlerName}
+            onStrikerNameChange={setEditStrikerName}
+            onNonStrikerNameChange={setEditNonStrikerName}
+            onBowlerNameChange={setEditBowlerName}
+            onConfirm={handleSavePlayerNames}
+            onCancel={() => {
+              setShowEditNamesModal(false);
+            }}
+            isSubmitting={isUpdatingNames}
           />
 
           <ChangePlayerModal

@@ -451,3 +451,106 @@ export async function getPlayersByMatch(matchId: string) {
 
   return data;
 }
+
+export async function updatePlayerName(
+  matchId: string,
+  playerId: string,
+  newName: string
+): Promise<{ data: Player | null; error?: string }> {
+  const supabase = await createClient();
+
+  const trimmed = newName.trim();
+  if (!trimmed) {
+    return { data: null, error: "Player name cannot be empty" };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { data: null, error: "Unauthorized" };
+  }
+
+  // Fetch existing player to get team
+  const { data: existingPlayer, error: fetchError } = await supabase
+    .from("players")
+    .select("id, team")
+    .eq("id", playerId)
+    .eq("match_id", matchId)
+    .single();
+
+  if (fetchError || !existingPlayer) {
+    return { data: null, error: fetchError?.message || "Player not found" };
+  }
+
+  // Enforce unique player names per team within a match
+  const { data: existing, error: existingError } = await supabase
+    .from("players")
+    .select("id")
+    .eq("match_id", matchId)
+    .eq("team", (existingPlayer as any).team)
+    .eq("name", trimmed)
+    .neq("id", playerId);
+
+  if (existingError) {
+    console.error("Error checking existing players:", existingError);
+    return { data: null, error: "Unable to validate player name" };
+  }
+
+  if (existing && existing.length > 0) {
+    return {
+      data: null,
+      error: "This team already has a player with that name.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("players")
+    .update({ name: trimmed })
+    .eq("id", playerId)
+    .eq("match_id", matchId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating player name:", error);
+    return { data: null, error: error.message };
+  }
+
+  // Also keep team roster in sync
+  try {
+    const { data: match } = await supabase
+      .from("matches")
+      .select("team_a_id, team_b_id")
+      .eq("id", matchId)
+      .single();
+
+    if (match) {
+      const teamId =
+        (existingPlayer as any).team === "A"
+          ? (match as any).team_a_id
+          : (match as any).team_b_id;
+
+      if (teamId) {
+        await supabase.from("team_players").upsert(
+          {
+            team_id: teamId,
+            name: trimmed,
+          },
+          { onConflict: "team_id,name" }
+        );
+      }
+    }
+  } catch (rosterError) {
+    console.error(
+      "Error updating team roster from updatePlayerName:",
+      rosterError
+    );
+  }
+
+  revalidatePath(`/match/${matchId}`);
+  revalidatePath(`/match/${matchId}/score`);
+  revalidatePath(`/match/${matchId}/display`);
+
+  return { data: data as Player };
+}

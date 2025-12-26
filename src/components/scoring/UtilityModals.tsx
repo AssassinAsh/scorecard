@@ -329,6 +329,123 @@ export function RetireModal({
   );
 }
 
+// Edit current player names (striker, non-striker, bowler)
+interface EditPlayerNamesModalProps {
+  show: boolean;
+  strikerName: string;
+  nonStrikerName: string;
+  bowlerName: string;
+  onStrikerNameChange: (name: string) => void;
+  onNonStrikerNameChange: (name: string) => void;
+  onBowlerNameChange: (name: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+}
+
+export function EditPlayerNamesModal({
+  show,
+  strikerName,
+  nonStrikerName,
+  bowlerName,
+  onStrikerNameChange,
+  onNonStrikerNameChange,
+  onBowlerNameChange,
+  onConfirm,
+  onCancel,
+  isSubmitting,
+}: EditPlayerNamesModalProps) {
+  if (!show) return null;
+
+  const canSave =
+    !!strikerName.trim() || !!nonStrikerName.trim() || !!bowlerName.trim();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div
+        className="max-w-md w-full rounded-lg p-6"
+        style={{
+          background: "var(--card-bg)",
+          border: "1px solid var(--border)",
+        }}
+      >
+        <h3 className="text-lg font-medium mb-4">Edit Player Names</h3>
+
+        <div className="space-y-3 mb-4 text-sm">
+          <div>
+            <label className="muted-text block mb-1">Striker</label>
+            <input
+              type="text"
+              value={strikerName}
+              onChange={(e) => onStrikerNameChange(e.target.value)}
+              placeholder="No striker selected"
+              className="w-full px-3 py-2 rounded-md"
+              style={{
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+            />
+          </div>
+          <div>
+            <label className="muted-text block mb-1">Non-striker</label>
+            <input
+              type="text"
+              value={nonStrikerName}
+              onChange={(e) => onNonStrikerNameChange(e.target.value)}
+              placeholder="No non-striker selected"
+              className="w-full px-3 py-2 rounded-md"
+              style={{
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+            />
+          </div>
+          <div>
+            <label className="muted-text block mb-1">Current bowler</label>
+            <input
+              type="text"
+              value={bowlerName}
+              onChange={(e) => onBowlerNameChange(e.target.value)}
+              placeholder="No bowler selected"
+              className="w-full px-3 py-2 rounded-md"
+              style={{
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onConfirm}
+            disabled={!canSave || isSubmitting}
+            className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "var(--accent)" }}
+          >
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="flex-1 py-2 rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "var(--background)",
+              border: "1px solid var(--border)",
+              color: "var(--foreground)",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Change Player Modal
 interface ChangePlayerModalProps {
   show: boolean;

@@ -61,6 +61,9 @@ interface ScoreDisplayProps {
     wickets: number;
     economy: string;
   } | null;
+
+  // Scorer-only: allow editing current player names
+  onEditCurrentPlayers?: () => void;
 }
 
 export default function ScoreDisplay({
@@ -89,6 +92,7 @@ export default function ScoreDisplay({
   nonStrikerStats,
   bowlerName,
   bowlerStats,
+  onEditCurrentPlayers,
 }: ScoreDisplayProps) {
   return (
     <div
@@ -211,6 +215,18 @@ export default function ScoreDisplay({
       {/* Batsmen Details - hide for completed matches */}
       {strikerName && !matchResult && (
         <div className="space-y-1.5 mb-3 text-sm">
+          {onEditCurrentPlayers && (
+            <div className="flex justify-end mb-1">
+              <button
+                type="button"
+                onClick={onEditCurrentPlayers}
+                className="text-xs font-medium opacity-70 hover:opacity-100"
+                style={{ color: "var(--accent)" }}
+              >
+                Edit names
+              </button>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="font-medium">{strikerName} *</span>
             <span className="muted-text">
