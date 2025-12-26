@@ -7,6 +7,7 @@ import {
   deleteLastBall,
   retireBatsman,
   updateOverBowler,
+  unretireBatsman,
 } from "@/app/actions/scoring";
 import { createPlayer } from "@/app/actions/matches";
 import {
@@ -284,15 +285,19 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const bowlingPlayers = existingPlayers.filter((p) => p.team === bowlingTeam);
   const fieldingPlayers = bowlingPlayers;
 
-  // Track dismissed players (from liveBatting.isOut) and retired players
-  const dismissedPlayerIds = new Set<string>(
-    liveBatting.filter((b) => b.isOut).map((b) => b.playerId)
-  );
-
-  // Retired players come from the live batting list where isOut is false but dismissal contains "retired"
+  // Track retired players separately so they can return to bat later.
+  // Any batter whose dismissal contains "retired" is treated as retired,
+  // and is *not* counted as dismissed for selection purposes.
   const retiredPlayerIds = new Set<string>(
     liveBatting
-      .filter((b) => !b.isOut && b.dismissal?.toLowerCase().includes("retired"))
+      .filter((b) => b.dismissal?.toLowerCase().includes("retired"))
+      .map((b) => b.playerId)
+  );
+
+  // Dismissed players are those marked out but not retired
+  const dismissedPlayerIds = new Set<string>(
+    liveBatting
+      .filter((b) => b.isOut && !retiredPlayerIds.has(b.playerId))
       .map((b) => b.playerId)
   );
 
@@ -886,8 +891,21 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
           nonStrikerId={nonStrikerId}
           selectedBatterId={selectedExistingBatterId}
           onSelectedBatterChange={setSelectedExistingBatterId}
-          onUseExisting={() => {
+          onUseExisting={async () => {
             if (!selectedExistingBatterId) return;
+
+            // If this batter was previously retired, remove the retirement
+            if (retiredPlayerIds.has(selectedExistingBatterId)) {
+              const result = await unretireBatsman(
+                inningsId,
+                selectedExistingBatterId
+              );
+              if ((result as { error?: string })?.error) {
+                alert(result.error);
+                return;
+              }
+            }
+
             if (selectBatterFor === "striker") {
               setStrikerId(selectedExistingBatterId);
             } else {

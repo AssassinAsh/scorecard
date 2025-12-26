@@ -531,6 +531,33 @@ export async function retireBatsman(
   return { success: true };
 }
 
+export async function unretireBatsman(inningsId: string, playerId: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("retirements")
+    .delete()
+    .eq("innings_id", inningsId)
+    .eq("player_id", playerId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const { data: innings } = await supabase
+    .from("innings")
+    .select("match_id")
+    .eq("id", inningsId)
+    .single();
+
+  if (innings) {
+    revalidatePath(`/match/${innings.match_id}`);
+    revalidatePath(`/match/${innings.match_id}/score`);
+  }
+
+  return { success: true };
+}
+
 export async function updateOverBowler(overId: string, bowlerId: string) {
   const supabase = await createClient();
 
