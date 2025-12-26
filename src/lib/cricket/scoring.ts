@@ -39,8 +39,10 @@ export function shouldRotateStrike(
   // For NoBall: only rotate if batsmen actually ran
   // (runs off bat OR bye/legbye runs)
   if (extrasType === "NoBall") {
-    const totalRunsRun = runsOffBat + extrasRuns;
-    return totalRunsRun % 2 === 1;
+    // For no-balls, only runs actually scored (off the bat or by running)
+    // should affect strike rotation. The penalty run for the no-ball itself
+    // does NOT rotate the strike.
+    return runsOffBat % 2 === 1;
   }
 
   // For Bye and LegBye: count those runs for strike rotation

@@ -678,8 +678,11 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         runs = 0;
       } else if (currentAction === "noball") {
         extrasType = "NoBall";
-        extrasRuns = selectedRuns + 1;
-        runs = 0;
+        // No-ball always gives 1 extra run. Any additional runs are
+        // scored by the batter (or running) and should be credited as
+        // runs off the bat, not extras.
+        extrasRuns = 1;
+        runs = selectedRuns;
       } else if (currentAction === "bye") {
         extrasType = "Bye";
         extrasRuns = selectedRuns;
