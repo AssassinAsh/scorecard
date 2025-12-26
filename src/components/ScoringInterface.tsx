@@ -363,8 +363,8 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     const team = ["bowler", "keeper", "fielder"].includes(addingPlayerFor)
       ? bowlingTeam
       : battingTeam;
-    const battingOrder =
-      (team === battingTeam ? battingPlayers : bowlingPlayers).length + 1;
+    const teamPlayers = team === battingTeam ? battingPlayers : bowlingPlayers;
+    const battingOrder = teamPlayers.length + 1;
 
     try {
       const result = await createPlayer(matchId, {

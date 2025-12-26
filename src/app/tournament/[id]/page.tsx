@@ -63,7 +63,14 @@ async function TournamentPageContent({
   const sortedMatches = matches.sort((a, b) => {
     const orderA = statusOrder[a.status as keyof typeof statusOrder] || 4;
     const orderB = statusOrder[b.status as keyof typeof statusOrder] || 4;
-    return orderA - orderB;
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+
+    // Within same status, sort by match_date (most recent first)
+    const timeA = a.match_date ? new Date(a.match_date).getTime() : 0;
+    const timeB = b.match_date ? new Date(b.match_date).getTime() : 0;
+    return timeB - timeA;
   });
 
   // OPTIMIZATION: Batch fetch all innings for completed matches (avoid N+1)

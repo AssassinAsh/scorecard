@@ -96,7 +96,7 @@ id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 match_id UUID REFERENCES matches(id) ON DELETE CASCADE NOT NULL,
 team team_side NOT NULL,
 name TEXT NOT NULL,
-batting_order INTEGER NOT NULL CHECK (batting_order BETWEEN 1 AND 11),
+batting_order INTEGER NOT NULL CHECK (batting_order >= 1),
 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
