@@ -243,7 +243,10 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   // Retire batsman modal
   const [showRetireModal, setShowRetireModal] = useState(false);
   const [retirePlayerId, setRetirePlayerId] = useState<string>("");
-  const [retireReason, setRetireReason] = useState<string>("");
+  const [retiringPlayerRole, setRetiringPlayerRole] = useState<
+    "striker" | "nonStriker" | null
+  >(null);
+  const [isRetiring, setIsRetiring] = useState(false);
 
   // Change player modal (for updating striker, non-striker, or bowler mid-innings)
   const [showChangePlayerModal, setShowChangePlayerModal] = useState(false);
@@ -473,14 +476,17 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   };
 
   const handleRetireBatsman = async () => {
-    if (!inningsId || !retirePlayerId || !retireReason.trim()) {
+    if (!inningsId || !retirePlayerId) {
       return;
     }
 
-    const result = await retireBatsman(inningsId, retirePlayerId, retireReason);
+    setIsRetiring(true);
+
+    const result = await retireBatsman(inningsId, retirePlayerId, "Retired");
 
     if ((result as { error?: string })?.error) {
       alert(result.error);
+      setIsRetiring(false);
       return;
     }
 
@@ -499,7 +505,8 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
 
     setShowRetireModal(false);
     setRetirePlayerId("");
-    setRetireReason("");
+    setRetiringPlayerRole(null);
+    setIsRetiring(false);
   };
 
   const handleChangePlayer = async () => {
@@ -848,8 +855,13 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
           onDeleteLastBall={() => setShowDeleteLastBallModal(true)}
           onChangeStrike={() => setShowChangeStrikeModal(true)}
           onRetireBatsman={() => {
-            setRetirePlayerId(strikerId || nonStrikerId);
-            setRetireReason("retired hurt");
+            if (!strikerId && !nonStrikerId) {
+              alert("No batsman to retire");
+              return;
+            }
+
+            setRetirePlayerId("");
+            setRetiringPlayerRole(null);
             setShowRetireModal(true);
           }}
           onChangeBowler={() => {
@@ -1022,13 +1034,24 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
 
           <RetireModal
             show={showRetireModal}
-            retireReason={retireReason}
-            onReasonChange={setRetireReason}
+            strikerName={strikerName || undefined}
+            nonStrikerName={nonStrikerName || undefined}
+            retiringPlayer={retiringPlayerRole}
+            isSubmitting={isRetiring}
+            onRetiringPlayerChange={(role) => {
+              setRetiringPlayerRole(role);
+              if (role === "striker" && strikerId) {
+                setRetirePlayerId(strikerId);
+              } else if (role === "nonStriker" && nonStrikerId) {
+                setRetirePlayerId(nonStrikerId);
+              }
+            }}
             onConfirm={handleRetireBatsman}
             onCancel={() => {
               setShowRetireModal(false);
               setRetirePlayerId("");
-              setRetireReason("");
+              setRetiringPlayerRole(null);
+              setIsRetiring(false);
             }}
           />
 

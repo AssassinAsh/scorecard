@@ -209,7 +209,7 @@ async function MatchPageContent({
 
         const retireReason = retirementMap.get(player.id);
         if (retireReason) {
-          dismissal = `retired ${retireReason}`;
+          dismissal = "Retired";
         }
         return {
           playerId: player.id,

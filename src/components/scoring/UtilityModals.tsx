@@ -220,16 +220,22 @@ export function ChangeStrikeModal({
 // Retire Batsman Modal
 interface RetireModalProps {
   show: boolean;
-  retireReason: string;
-  onReasonChange: (reason: string) => void;
+  strikerName?: string;
+  nonStrikerName?: string;
+  retiringPlayer: "striker" | "nonStriker" | null;
+  onRetiringPlayerChange: (player: "striker" | "nonStriker") => void;
+  isSubmitting: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 export function RetireModal({
   show,
-  retireReason,
-  onReasonChange,
+  strikerName,
+  nonStrikerName,
+  retiringPlayer,
+  onRetiringPlayerChange,
+  isSubmitting,
   onConfirm,
   onCancel,
 }: RetireModalProps) {
@@ -245,33 +251,70 @@ export function RetireModal({
         }}
       >
         <h3 className="text-lg font-medium mb-4">Retire Batsman</h3>
-        <div className="mb-4">
-          <label className="text-sm muted-text mb-1 block">Reason</label>
-          <input
-            type="text"
-            value={retireReason}
-            onChange={(e) => onReasonChange(e.target.value)}
-            placeholder="e.g. retired hurt"
-            className="w-full px-3 py-2 rounded-md"
-            style={{
-              background: "var(--background)",
-              border: "1px solid var(--border)",
-              color: "var(--foreground)",
-            }}
-          />
+        <div className="mb-4 space-y-2">
+          <div>
+            <label className="text-sm muted-text block mb-1">
+              Select batter to retire
+            </label>
+            <div className="space-y-1">
+              {strikerName && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="retiring-batter"
+                    value="striker"
+                    checked={retiringPlayer === "striker"}
+                    onChange={() => onRetiringPlayerChange("striker")}
+                  />
+                  <span>
+                    Striker: <span className="font-medium">{strikerName}</span>
+                  </span>
+                </label>
+              )}
+              {nonStrikerName && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="retiring-batter"
+                    value="nonStriker"
+                    checked={retiringPlayer === "nonStriker"}
+                    onChange={() => onRetiringPlayerChange("nonStriker")}
+                  />
+                  <span>
+                    Non-striker:{" "}
+                    <span className="font-medium">{nonStrikerName}</span>
+                  </span>
+                </label>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm muted-text block mb-1">Reason</label>
+            <div
+              className="w-full px-3 py-2 rounded-md text-sm"
+              style={{
+                background: "var(--background)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
+            >
+              Retired
+            </div>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={onConfirm}
-            disabled={!retireReason.trim()}
+            disabled={!retiringPlayer || isSubmitting}
             className="flex-1 py-2 rounded-md text-sm font-medium text-white disabled:opacity-50"
             style={{ background: "var(--accent)" }}
           >
-            Retire
+            {isSubmitting ? "Retiring..." : "Retire"}
           </button>
           <button
             onClick={onCancel}
-            className="flex-1 py-2 rounded-md text-sm font-medium"
+            disabled={isSubmitting}
+            className="flex-1 py-2 rounded-md text-sm font-medium disabled:opacity-50"
             style={{
               background: "var(--background)",
               border: "1px solid var(--border)",

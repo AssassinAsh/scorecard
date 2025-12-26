@@ -233,7 +233,7 @@ export default async function ScoringPage({
 
         const retireReason = retirementMap.get(player.id);
         if (retireReason) {
-          dismissal = `retired ${retireReason}`;
+          dismissal = "Retired";
         }
         return {
           playerId: player.id,
