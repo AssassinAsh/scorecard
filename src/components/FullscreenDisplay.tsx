@@ -222,7 +222,8 @@ export default function FullscreenDisplay({
         color: "#ffffff",
         position: "relative",
         display: isFullscreen ? "flex" : "block",
-        flexDirection: isFullscreen ? "column" : undefined,
+        justifyContent: isFullscreen ? "center" : undefined,
+        alignItems: isFullscreen ? "center" : undefined,
         overflow: "hidden",
       }}
     >
@@ -231,6 +232,10 @@ export default function FullscreenDisplay({
           // In fullscreen, add extra top and bottom padding so content
           // doesn't touch the screen edges, while keeping everything
           // within a single non-scrollable slide.
+          height: isFullscreen ? "100%" : undefined,
+          maxWidth: isFullscreen ? "100vw" : "100%",
+          aspectRatio: isFullscreen ? "16 / 9" : undefined,
+          margin: isFullscreen ? "0 auto" : undefined,
           padding: isFullscreen
             ? isCompact
               ? "0.3rem 0.5rem 1.4rem 0.5rem"
@@ -240,7 +245,7 @@ export default function FullscreenDisplay({
           // Allow vertical scrolling inside the fullscreen surface on
           // small devices while still preventing horizontal scroll.
           overflowX: "hidden",
-          overflowY: isFullscreen ? "auto" : "visible",
+          overflowY: isFullscreen ? "hidden" : "visible",
           display: "flex",
           flexDirection: "column",
           gap: isFullscreen ? (isCompact ? "0.15rem" : "0.5rem") : "0",
