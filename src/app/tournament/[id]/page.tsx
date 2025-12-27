@@ -6,7 +6,6 @@ import {
 } from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { createClient } from "@/lib/supabase/server";
-import Footer from "@/components/Footer";
 import NewMatchButton from "@/components/NewMatchButton";
 import { TournamentSkeleton } from "@/components/Skeletons";
 import TournamentMatchList from "@/components/TournamentMatchList";
@@ -179,7 +178,6 @@ async function TournamentPageContent({
           isAdmin={admin}
         />
       </main>
-      <Footer />
     </div>
   );
 }
