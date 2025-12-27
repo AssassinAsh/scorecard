@@ -207,8 +207,11 @@ export default function FullscreenDisplay({
   return (
     <div
       style={{
-        minHeight: "100vh",
-        height: isFullscreen ? "100vh" : "auto",
+        // Use dynamic viewport units in fullscreen to better respect
+        // the visible area on mobile browsers (especially iOS Safari)
+        // and avoid content being cut off by browser UI.
+        minHeight: isFullscreen ? "100dvh" : "100vh",
+        height: isFullscreen ? "100dvh" : "auto",
         background: "linear-gradient(135deg, #0a0f1a 0%, #1a1f2e 100%)",
         color: "#ffffff",
         position: "relative",
@@ -228,7 +231,10 @@ export default function FullscreenDisplay({
               : "1.5rem 1.5rem 3rem 1.5rem"
             : "1rem 1.5rem",
           flex: isFullscreen ? "1" : undefined,
-          overflow: isFullscreen ? (isCompact ? "auto" : "hidden") : "visible",
+          // Allow vertical scrolling inside the fullscreen surface on
+          // small devices while still preventing horizontal scroll.
+          overflowX: "hidden",
+          overflowY: isFullscreen ? "auto" : "visible",
           display: "flex",
           flexDirection: "column",
           gap: isFullscreen ? (isCompact ? "0.35rem" : "0.5rem") : "0",
