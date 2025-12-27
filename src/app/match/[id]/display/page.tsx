@@ -135,6 +135,7 @@ async function DisplayPageContent({
   let liveBatting: LiveBattingRow[] = [];
   let liveBowling: LiveBowlingRow[] = [];
   let currentBowler: LiveBowlingRow | null = null;
+  let isFreeHit = false;
 
   if (displayInnings && inningsDetail) {
     const battingPlayers = players.filter(
@@ -206,6 +207,17 @@ async function DisplayPageContent({
         currentBowler =
           liveBowling.find((b) => b.playerId === latestOver.bowler_id) || null;
       }
+    }
+
+    // Free hit handling: if the most recent delivery was a no-ball
+    // without a wicket, the next ball is a free hit. This mirrors
+    // the logic used in the scoring interface.
+    if (
+      recentBalls.length > 0 &&
+      recentBalls[0].extras_type === "NoBall" &&
+      recentBalls[0].wicket_type === "None"
+    ) {
+      isFreeHit = true;
     }
 
     // Calculate current partnership
@@ -344,6 +356,7 @@ async function DisplayPageContent({
         currentBowler={currentBowler}
         displayOverBalls={displayOverBalls}
         matchResult={matchResult}
+        isFreeHit={isFreeHit}
       />
 
       {/* Real-time updates for live matches */}

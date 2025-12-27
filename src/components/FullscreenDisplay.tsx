@@ -53,6 +53,7 @@ interface FullscreenDisplayProps {
   } | null;
   displayOverBalls: string[];
   matchResult: string | null;
+  isFreeHit: boolean;
 }
 
 export default function FullscreenDisplay({
@@ -67,6 +68,7 @@ export default function FullscreenDisplay({
   currentBowler,
   displayOverBalls,
   matchResult,
+  isFreeHit,
 }: FullscreenDisplayProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<number | null>(null);
@@ -413,6 +415,26 @@ export default function FullscreenDisplay({
                   ({formatOvers(calculateOvers(displayInnings.balls_bowled))} /{" "}
                   {match.overs_per_innings} overs)
                 </div>
+
+                {/* Free Hit Indicator */}
+                {match.status === "Live" && isFreeHit && (
+                  <div
+                    style={{
+                      marginTop: "0.5rem",
+                      fontSize: isFullscreen
+                        ? isCompact
+                          ? "0.9rem"
+                          : "1rem"
+                        : "0.875rem",
+                      fontWeight: 600,
+                      color: "#f97373",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    ⚠️ Free Hit
+                  </div>
+                )}
 
                 {/* Chase Information */}
                 {isSecondInnings && targetRuns && (
