@@ -123,8 +123,11 @@ export default function FullscreenDisplay({
       }
 
       const height = window.innerHeight;
-      // Treat viewports shorter than ~480px as "compact".
-      setIsCompact(height < 480);
+      const width = window.innerWidth;
+      // Treat landscape viewports with relatively small height as
+      // "compact" (e.g. phone/tablet landscape), but keep the
+      // larger layout for big screens like TVs or desktops.
+      setIsCompact(width > height && height < 900);
     };
 
     handleResize();
@@ -345,9 +348,21 @@ export default function FullscreenDisplay({
               style={{
                 background: "rgba(255, 255, 255, 0.05)",
                 borderRadius: "1rem",
-                padding: isFullscreen ? "2rem 1.5rem" : "1.25rem",
-                marginTop: isFullscreen ? "0.5rem" : 0,
-                marginBottom: isFullscreen ? "0.75rem" : "1.25rem",
+                padding: isFullscreen
+                  ? isCompact
+                    ? "1.25rem 1.25rem"
+                    : "2rem 1.5rem"
+                  : "1.25rem",
+                marginTop: isFullscreen
+                  ? isCompact
+                    ? "0.25rem"
+                    : "0.5rem"
+                  : 0,
+                marginBottom: isFullscreen
+                  ? isCompact
+                    ? "0.5rem"
+                    : "0.75rem"
+                  : "1.25rem",
                 border: "2px solid rgba(255, 255, 255, 0.1)",
               }}
             >

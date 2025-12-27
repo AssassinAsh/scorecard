@@ -87,6 +87,7 @@ async function MatchPageContent({
     notFound();
   }
 
+  const isAuthenticated = Boolean(user);
   // Check if user has scorer access to this tournament
   const hasScorerAccess = user ? await hasAccess(match.tournament_id) : false;
   const admin = user ? await isAdmin() : false;
@@ -545,7 +546,9 @@ async function MatchPageContent({
         }}
         canEditContacts={canEditContacts}
         showScorerActions={hasScorerAccess && match.status !== "Completed"}
-        showDisplayCTA={hasScorerAccess}
+        // Full Screen CTA should be visible to all authenticated
+        // users, regardless of scorer/admin access.
+        showDisplayCTA={isAuthenticated}
         hasTossData={Boolean(match.toss_winner_id)}
         hasPlayers={players.length > 0}
         tossWinner={match.toss_winner}

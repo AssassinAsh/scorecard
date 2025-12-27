@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
-import { hasAccess } from "@/app/actions/tournaments";
+import { createClient } from "@/lib/supabase/server";
 import {
   getCurrentInnings,
   getAllInnings,
@@ -71,6 +71,18 @@ async function DisplayPageContent({
 }) {
   const { id } = await params;
 
+  // Require authentication for the display route, but do not enforce
+  // scorer/admin permissions. Any logged-in user can view the
+  // fullscreen display.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   // Parallelize independent queries for faster page loads
   const [match, players, currentInnings, allInnings] = await Promise.all([
     getMatchById(id),
@@ -80,14 +92,6 @@ async function DisplayPageContent({
   ]);
 
   if (!match) {
-    notFound();
-  }
-
-  // Only allow admins/scorers (tournament scorers) to access the
-  // big-screen display route. Public viewers should not reach this
-  // page directly.
-  const hasScorerAccess = await hasAccess(match.tournament_id);
-  if (!hasScorerAccess) {
     notFound();
   }
   const completedInnings = allInnings.filter((i) => i.is_completed);
