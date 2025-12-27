@@ -129,8 +129,8 @@ export default function FullscreenDisplay({
       // Treat landscape viewports with relatively small height as
       // "compact" (e.g. phone/tablet landscape), but keep the
       // larger layout for big screens like TVs or desktops.
-      // Lower threshold to 600 to reliably catch phone landscape.
-      setIsCompact(width > height && height < 600);
+      // Raised to 700 to catch all phone landscape modes.
+      setIsCompact(width > height && height < 700);
     };
 
     handleResize();
@@ -233,7 +233,7 @@ export default function FullscreenDisplay({
           // within a single non-scrollable slide.
           padding: isFullscreen
             ? isCompact
-              ? "0.4rem 0.6rem 1.6rem 0.6rem"
+              ? "0.3rem 0.5rem 1.4rem 0.5rem"
               : "1.5rem 1.5rem 3rem 1.5rem"
             : "1rem 1.5rem",
           flex: isFullscreen ? "1" : undefined,
@@ -243,7 +243,7 @@ export default function FullscreenDisplay({
           overflowY: isFullscreen ? "auto" : "visible",
           display: "flex",
           flexDirection: "column",
-          gap: isFullscreen ? (isCompact ? "0.2rem" : "0.5rem") : "0",
+          gap: isFullscreen ? (isCompact ? "0.15rem" : "0.5rem") : "0",
         }}
       >
         {/* Header */}
@@ -353,13 +353,13 @@ export default function FullscreenDisplay({
                 borderRadius: "1rem",
                 padding: isFullscreen
                   ? isCompact
-                    ? "0.8rem 0.8rem"
+                    ? "0.5rem 0.5rem"
                     : "2rem 1.5rem"
                   : "1.25rem",
-                marginTop: isFullscreen ? (isCompact ? "0.1rem" : "0.5rem") : 0,
+                marginTop: isFullscreen ? (isCompact ? "0rem" : "0.5rem") : 0,
                 marginBottom: isFullscreen
                   ? isCompact
-                    ? "0.3rem"
+                    ? "0.2rem"
                     : "0.75rem"
                   : "1.25rem",
                 border: "2px solid rgba(255, 255, 255, 0.1)",
@@ -370,11 +370,12 @@ export default function FullscreenDisplay({
                   style={{
                     fontSize: isFullscreen
                       ? isCompact
-                        ? "1.1rem"
+                        ? "0.85rem"
                         : "1.5rem"
                       : "1.125rem",
                     color: "#94a3b8",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.25rem" : "0.5rem",
                     fontWeight: "600",
                   }}
                 >
@@ -384,12 +385,13 @@ export default function FullscreenDisplay({
                   style={{
                     fontSize: isFullscreen
                       ? isCompact
-                        ? "2.4rem"
+                        ? "1.8rem"
                         : "3rem"
                       : "3.5rem",
                     fontWeight: "bold",
                     lineHeight: "1",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.25rem" : "0.5rem",
                     textShadow: "0 4px 8px rgba(0, 0, 0, 0.5)",
                   }}
                 >
@@ -402,11 +404,15 @@ export default function FullscreenDisplay({
                   style={{
                     fontSize: isFullscreen
                       ? isCompact
-                        ? "0.9rem"
+                        ? "0.8rem"
                         : "1.1rem"
                       : "1.25rem",
                     color: "#94a3b8",
-                    marginBottom: isSecondInnings ? "0.75rem" : "0",
+                    marginBottom: isSecondInnings
+                      ? isFullscreen && isCompact
+                        ? "0.4rem"
+                        : "0.75rem"
+                      : "0",
                   }}
                 >
                   ({formatOvers(calculateOvers(displayInnings.balls_bowled))} /{" "}
@@ -417,10 +423,11 @@ export default function FullscreenDisplay({
                 {match.status === "Live" && isFreeHit && (
                   <div
                     style={{
-                      marginTop: "0.5rem",
+                      marginTop:
+                        isFullscreen && isCompact ? "0.3rem" : "0.5rem",
                       fontSize: isFullscreen
                         ? isCompact
-                          ? "0.9rem"
+                          ? "0.8rem"
                           : "1rem"
                         : "0.875rem",
                       fontWeight: 600,
@@ -438,8 +445,8 @@ export default function FullscreenDisplay({
                   <div
                     style={{
                       marginTop:
-                        isFullscreen && isCompact ? "0.5rem" : "0.75rem",
-                      padding: isFullscreen && isCompact ? "0.75rem" : "1rem",
+                        isFullscreen && isCompact ? "0.3rem" : "0.75rem",
+                      padding: isFullscreen && isCompact ? "0.5rem" : "1rem",
                       background: "rgba(59, 130, 246, 0.1)",
                       borderRadius: "0.75rem",
                       border: "1px solid rgba(59, 130, 246, 0.3)",
@@ -449,7 +456,7 @@ export default function FullscreenDisplay({
                       style={{
                         fontSize: isFullscreen
                           ? isCompact
-                            ? "0.9rem"
+                            ? "0.8rem"
                             : "1rem"
                           : "1.125rem",
                         fontWeight: "600",
