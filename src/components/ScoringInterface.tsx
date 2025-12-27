@@ -215,17 +215,14 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const [keeperId, setKeeperId] = useState<string>("");
   const [runOutBatsmanId, setRunOutBatsmanId] = useState<string>("");
 
-  // Free hit tracking
-  const [isFreeHit, setIsFreeHit] = useState(false);
-
-  // Restore free hit state after a page reload (set on previous no-ball)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const key = `free_hit_${inningsId}`;
-    if (window.sessionStorage.getItem(key) === "1") {
-      setIsFreeHit(true);
-    }
-  }, [inningsId]);
+  // Free hit is derived from the latest ball data:
+  // if the most recent delivery was a no-ball without a wicket,
+  // the next ball is a free hit.
+  const isFreeHit =
+    !readOnly &&
+    recentBalls.length > 0 &&
+    recentBalls[0].extras_type === "NoBall" &&
+    recentBalls[0].wicket_type === "None";
 
   // New over modal
   const [showNewOverModal, setShowNewOverModal] = useState(false);
@@ -782,26 +779,6 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
           }
           setSelectedExistingBatterId("");
           setShowSelectBatterModal(true);
-        }
-
-        // Clear free hit after this ball (if it wasn't a no ball)
-        if (currentAction !== "noball") {
-          setIsFreeHit(false);
-          if (typeof window !== "undefined") {
-            const key = `free_hit_${inningsId}`;
-            window.sessionStorage.removeItem(key);
-          }
-        }
-
-        // Persist free hit flag client-side
-        if (
-          !isWicket &&
-          currentAction === "noball" &&
-          typeof window !== "undefined"
-        ) {
-          const key = `free_hit_${inningsId}`;
-          window.sessionStorage.setItem(key, "1");
-          setIsFreeHit(true);
         }
       }
     } catch (error) {
