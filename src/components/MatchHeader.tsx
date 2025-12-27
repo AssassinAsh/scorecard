@@ -30,6 +30,7 @@ interface MatchHeaderProps {
   hasPlayers: boolean;
   tossWinner: TeamSide | null;
   tossDecision: TossDecision | null;
+  showDisplayCTA: boolean;
 }
 
 export default function MatchHeader({
@@ -40,6 +41,7 @@ export default function MatchHeader({
   hasPlayers,
   tossWinner,
   tossDecision,
+  showDisplayCTA,
 }: MatchHeaderProps) {
   const [editingTeam, setEditingTeam] = useState<"A" | "B" | null>(null);
   const [showTossDialog, setShowTossDialog] = useState(false);
@@ -175,21 +177,22 @@ export default function MatchHeader({
                     : "Start Second Innings"}
                 </Link>
               )}
-            {(match.status === "Live" ||
-              match.status === "Innings Break" ||
-              match.status === "Completed") && (
-              <Link
-                href={`/match/${match.id}/display`}
-                className="px-3 py-1.5 rounded-md font-medium"
-                style={{
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
-                  color: "var(--accent)",
-                }}
-              >
-                ⛶ Full Screen
-              </Link>
-            )}
+            {showDisplayCTA &&
+              (match.status === "Live" ||
+                match.status === "Innings Break" ||
+                match.status === "Completed") && (
+                <Link
+                  href={`/match/${match.id}/display`}
+                  className="px-3 py-1.5 rounded-md font-medium"
+                  style={{
+                    background: "rgba(59, 130, 246, 0.1)",
+                    border: "1px solid rgba(59, 130, 246, 0.3)",
+                    color: "var(--accent)",
+                  }}
+                >
+                  ⛶ Full Screen
+                </Link>
+              )}
           </div>
         </div>
       </header>

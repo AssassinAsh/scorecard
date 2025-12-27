@@ -14,6 +14,7 @@ interface FullscreenDisplayProps {
     status: string;
     match_type: string | null;
     overs_per_innings: number;
+    tournaments?: { name?: string | null } | null;
   };
   displayInnings: {
     batting_team: "A" | "B";
@@ -107,15 +108,32 @@ export default function FullscreenDisplay({
     setLastUpdate(Date.now());
   }, []);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     if (!isFullscreen) {
       // Enter fullscreen
       setIsFullscreen(true);
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {
-          // If the browser blocks fullscreen, we still keep our internal
-          // fullscreen layout (header/footer hidden, no scroll).
-        });
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+
+        // On supported mobile browsers, try to lock orientation to landscape
+        // when entering fullscreen. This is a best-effort hint and will be
+        // ignored silently if not allowed.
+        if (typeof window !== "undefined") {
+          const orientation = (screen as any).orientation;
+          if (orientation && typeof orientation.lock === "function") {
+            try {
+              await orientation.lock("landscape");
+            } catch {
+              // Ignore failures; some browsers require user gesture policies
+              // or do not allow programmatic orientation locking.
+            }
+          }
+        }
+      } catch {
+        // If the browser blocks fullscreen or orientation lock, we still keep
+        // our internal fullscreen layout (header/footer hidden, no scroll).
       }
     } else {
       // Exit fullscreen
@@ -127,6 +145,9 @@ export default function FullscreenDisplay({
       }
     }
   };
+
+  const tournamentName =
+    (match as any).tournaments?.name || (match as any).tournament_name || null;
 
   const battingTeamName =
     displayInnings?.batting_team === "A"
@@ -172,12 +193,15 @@ export default function FullscreenDisplay({
     >
       <div
         style={{
-          padding: isFullscreen ? "0.75rem 1.25rem" : "1rem 1.5rem",
+          // In fullscreen, add extra top and bottom padding so content
+          // doesn't touch the screen edges, while keeping everything
+          // within a single non-scrollable slide.
+          padding: isFullscreen ? "1.5rem 1.5rem 3rem 1.5rem" : "1rem 1.5rem",
           flex: isFullscreen ? "1" : undefined,
-          overflow: isFullscreen ? "auto" : "visible",
+          overflow: isFullscreen ? "hidden" : "visible",
           display: "flex",
           flexDirection: "column",
-          gap: isFullscreen ? "0.75rem" : "0",
+          gap: isFullscreen ? "0.5rem" : "0",
         }}
       >
         {/* Header */}
@@ -285,15 +309,16 @@ export default function FullscreenDisplay({
               style={{
                 background: "rgba(255, 255, 255, 0.05)",
                 borderRadius: "1rem",
-                padding: isFullscreen ? "3rem" : "1.25rem",
-                marginBottom: "1.25rem",
+                padding: isFullscreen ? "2rem 1.5rem" : "1.25rem",
+                marginTop: isFullscreen ? "0.5rem" : 0,
+                marginBottom: isFullscreen ? "0.75rem" : "1.25rem",
                 border: "2px solid rgba(255, 255, 255, 0.1)",
               }}
             >
               <div style={{ textAlign: "center" }}>
                 <div
                   style={{
-                    fontSize: isFullscreen ? "2rem" : "1.125rem",
+                    fontSize: isFullscreen ? "1.5rem" : "1.125rem",
                     color: "#94a3b8",
                     marginBottom: "0.5rem",
                     fontWeight: "600",
@@ -303,7 +328,7 @@ export default function FullscreenDisplay({
                 </div>
                 <div
                   style={{
-                    fontSize: isFullscreen ? "3.5rem" : "3.5rem",
+                    fontSize: isFullscreen ? "3rem" : "3.5rem",
                     fontWeight: "bold",
                     lineHeight: "1",
                     marginBottom: "0.5rem",
@@ -317,7 +342,7 @@ export default function FullscreenDisplay({
                 </div>
                 <div
                   style={{
-                    fontSize: isFullscreen ? "1.25rem" : "1.25rem",
+                    fontSize: isFullscreen ? "1.1rem" : "1.25rem",
                     color: "#94a3b8",
                     marginBottom: isSecondInnings ? "0.75rem" : "0",
                   }}
@@ -339,7 +364,7 @@ export default function FullscreenDisplay({
                   >
                     <div
                       style={{
-                        fontSize: isFullscreen ? "1.125rem" : "1.125rem",
+                        fontSize: isFullscreen ? "1rem" : "1.125rem",
                         fontWeight: "600",
                         color: "#93c5fd",
                       }}
@@ -349,7 +374,7 @@ export default function FullscreenDisplay({
                     {requiredRunRate && (
                       <div
                         style={{
-                          fontSize: isFullscreen ? "0.875rem" : "1rem",
+                          fontSize: isFullscreen ? "0.8rem" : "1rem",
                           color: "#94a3b8",
                           marginTop: "0.25rem",
                         }}
@@ -369,13 +394,13 @@ export default function FullscreenDisplay({
                   background: "rgba(139, 92, 246, 0.1)",
                   border: "1px solid rgba(139, 92, 246, 0.3)",
                   borderRadius: "0.75rem",
-                  padding: isFullscreen ? "0.75rem" : "1rem",
-                  marginBottom: "1rem",
+                  padding: isFullscreen ? "0.6rem 0.75rem" : "1rem",
+                  marginBottom: isFullscreen ? "0.5rem" : "1rem",
                 }}
               >
                 <div
                   style={{
-                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    fontSize: isFullscreen ? "0.8rem" : "1rem",
                     color: "#c4b5fd",
                     marginBottom: "0.5rem",
                     fontWeight: "600",
@@ -394,7 +419,7 @@ export default function FullscreenDisplay({
                   <div>
                     <div
                       style={{
-                        fontSize: isFullscreen ? "0.875rem" : "1rem",
+                        fontSize: isFullscreen ? "0.8rem" : "1rem",
                         fontWeight: "600",
                         marginBottom: "0.25rem",
                       }}
@@ -403,7 +428,7 @@ export default function FullscreenDisplay({
                     </div>
                     <div
                       style={{
-                        fontSize: isFullscreen ? "1.5rem" : "1.5rem",
+                        fontSize: isFullscreen ? "1.3rem" : "1.5rem",
                         fontWeight: "bold",
                         color: "#a78bfa",
                       }}
@@ -415,7 +440,7 @@ export default function FullscreenDisplay({
                   <div>
                     <div
                       style={{
-                        fontSize: isFullscreen ? "0.875rem" : "1rem",
+                        fontSize: isFullscreen ? "0.8rem" : "1rem",
                         fontWeight: "600",
                         marginBottom: "0.25rem",
                       }}
@@ -424,7 +449,7 @@ export default function FullscreenDisplay({
                     </div>
                     <div
                       style={{
-                        fontSize: isFullscreen ? "1.5rem" : "1.5rem",
+                        fontSize: isFullscreen ? "1.3rem" : "1.5rem",
                         fontWeight: "bold",
                         color: "#a78bfa",
                       }}
@@ -443,8 +468,8 @@ export default function FullscreenDisplay({
                 style={{
                   background: "rgba(255, 255, 255, 0.05)",
                   borderRadius: "0.75rem",
-                  padding: isFullscreen ? "0.75rem" : "1rem",
-                  marginBottom: "1rem",
+                  padding: isFullscreen ? "0.6rem 0.75rem" : "1rem",
+                  marginBottom: isFullscreen ? "0.5rem" : "1rem",
                 }}
               >
                 <div
@@ -468,13 +493,13 @@ export default function FullscreenDisplay({
                     <div
                       key={index}
                       style={{
-                        width: isFullscreen ? "2.5rem" : "2.5rem",
-                        height: isFullscreen ? "2.5rem" : "2.5rem",
+                        width: isFullscreen ? "2.2rem" : "2.5rem",
+                        height: isFullscreen ? "2.2rem" : "2.5rem",
                         borderRadius: "50%",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: isFullscreen ? "1.25rem" : "1.5rem",
+                        fontSize: isFullscreen ? "1.1rem" : "1.5rem",
                         fontWeight: "bold",
                         background:
                           ball === "W"
@@ -516,13 +541,13 @@ export default function FullscreenDisplay({
                   background: "rgba(249, 115, 22, 0.1)",
                   border: "1px solid rgba(249, 115, 22, 0.3)",
                   borderRadius: "0.75rem",
-                  padding: isFullscreen ? "0.75rem" : "1rem",
-                  marginBottom: "1rem",
+                  padding: isFullscreen ? "0.6rem 0.75rem" : "1rem",
+                  marginBottom: isFullscreen ? "0.5rem" : "1rem",
                 }}
               >
                 <div
                   style={{
-                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    fontSize: isFullscreen ? "0.8rem" : "1rem",
                     color: "#fdba74",
                     marginBottom: "0.5rem",
                     fontWeight: "600",
@@ -532,7 +557,7 @@ export default function FullscreenDisplay({
                 </div>
                 <div
                   style={{
-                    fontSize: isFullscreen ? "1.125rem" : "1.25rem",
+                    fontSize: isFullscreen ? "1rem" : "1.25rem",
                     fontWeight: "bold",
                     marginBottom: "0.5rem",
                   }}
@@ -541,7 +566,7 @@ export default function FullscreenDisplay({
                 </div>
                 <div
                   style={{
-                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    fontSize: isFullscreen ? "0.8rem" : "1rem",
                     color: "#94a3b8",
                   }}
                 >
@@ -558,12 +583,12 @@ export default function FullscreenDisplay({
                   background: "rgba(255, 255, 255, 0.03)",
                   border: "1px solid rgba(255, 255, 255, 0.1)",
                   borderRadius: "0.75rem",
-                  padding: isFullscreen ? "0.75rem" : "1rem",
+                  padding: isFullscreen ? "0.6rem 0.75rem" : "1rem",
                 }}
               >
                 <div
                   style={{
-                    fontSize: isFullscreen ? "0.875rem" : "1rem",
+                    fontSize: isFullscreen ? "0.8rem" : "1rem",
                     color: "#94a3b8",
                     marginBottom: "0.5rem",
                     fontWeight: "600",
@@ -585,7 +610,7 @@ export default function FullscreenDisplay({
                   >
                     <span
                       style={{
-                        fontSize: isFullscreen ? "0.875rem" : "1rem",
+                        fontSize: isFullscreen ? "0.8rem" : "1rem",
                         fontWeight: "600",
                       }}
                     >
@@ -595,7 +620,7 @@ export default function FullscreenDisplay({
                     </span>
                     <span
                       style={{
-                        fontSize: isFullscreen ? "1rem" : "1.125rem",
+                        fontSize: isFullscreen ? "0.95rem" : "1.125rem",
                         fontWeight: "bold",
                       }}
                     >
@@ -632,12 +657,53 @@ export default function FullscreenDisplay({
         )}
       </div>
 
+      {/* Fullscreen footer text */}
+      {isFullscreen && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: "1.25rem",
+            textAlign: "center",
+            fontSize: "0.8rem",
+            color: "#e2e8f0",
+            pointerEvents: "none",
+          }}
+        >
+          {tournamentName && (
+            <div
+              style={{
+                marginBottom: "0.15rem",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "#cbd5f5",
+              }}
+            >
+              {tournamentName}
+            </div>
+          )}
+          <div
+            style={{
+              fontSize: "0.8rem",
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              color: "#94a3b8",
+            }}
+          >
+            Developed by Ashvin Rokade
+          </div>
+        </div>
+      )}
+
       {/* Fullscreen Toggle Button (Bottom Right Corner) */}
       <button
         onClick={toggleFullscreen}
         style={{
           position: "fixed",
-          bottom: "1.5rem",
+          bottom: "3rem",
           right: "1.5rem",
           width: "3rem",
           height: "3rem",

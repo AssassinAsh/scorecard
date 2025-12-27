@@ -545,6 +545,7 @@ async function MatchPageContent({
         }}
         canEditContacts={canEditContacts}
         showScorerActions={hasScorerAccess && match.status !== "Completed"}
+        showDisplayCTA={hasScorerAccess}
         hasTossData={Boolean(match.toss_winner_id)}
         hasPlayers={players.length > 0}
         tossWinner={match.toss_winner}

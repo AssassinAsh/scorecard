@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
+import { hasAccess } from "@/app/actions/tournaments";
 import {
   getCurrentInnings,
   getAllInnings,
@@ -79,6 +80,14 @@ async function DisplayPageContent({
   ]);
 
   if (!match) {
+    notFound();
+  }
+
+  // Only allow admins/scorers (tournament scorers) to access the
+  // big-screen display route. Public viewers should not reach this
+  // page directly.
+  const hasScorerAccess = await hasAccess(match.tournament_id);
+  if (!hasScorerAccess) {
     notFound();
   }
   const completedInnings = allInnings.filter((i) => i.is_completed);
