@@ -129,7 +129,8 @@ export default function FullscreenDisplay({
       // Treat landscape viewports with relatively small height as
       // "compact" (e.g. phone/tablet landscape), but keep the
       // larger layout for big screens like TVs or desktops.
-      setIsCompact(width > height && height < 900);
+      // Lower threshold to 600 to reliably catch phone landscape.
+      setIsCompact(width > height && height < 600);
     };
 
     handleResize();
@@ -232,7 +233,7 @@ export default function FullscreenDisplay({
           // within a single non-scrollable slide.
           padding: isFullscreen
             ? isCompact
-              ? "0.9rem 0.9rem 2.4rem 0.9rem"
+              ? "0.4rem 0.6rem 1.6rem 0.6rem"
               : "1.5rem 1.5rem 3rem 1.5rem"
             : "1rem 1.5rem",
           flex: isFullscreen ? "1" : undefined,
@@ -242,7 +243,7 @@ export default function FullscreenDisplay({
           overflowY: isFullscreen ? "auto" : "visible",
           display: "flex",
           flexDirection: "column",
-          gap: isFullscreen ? (isCompact ? "0.35rem" : "0.5rem") : "0",
+          gap: isFullscreen ? (isCompact ? "0.2rem" : "0.5rem") : "0",
         }}
       >
         {/* Header */}
@@ -352,17 +353,13 @@ export default function FullscreenDisplay({
                 borderRadius: "1rem",
                 padding: isFullscreen
                   ? isCompact
-                    ? "1.25rem 1.25rem"
+                    ? "0.8rem 0.8rem"
                     : "2rem 1.5rem"
                   : "1.25rem",
-                marginTop: isFullscreen
-                  ? isCompact
-                    ? "0.25rem"
-                    : "0.5rem"
-                  : 0,
+                marginTop: isFullscreen ? (isCompact ? "0.1rem" : "0.5rem") : 0,
                 marginBottom: isFullscreen
                   ? isCompact
-                    ? "0.5rem"
+                    ? "0.3rem"
                     : "0.75rem"
                   : "1.25rem",
                 border: "2px solid rgba(255, 255, 255, 0.1)",
@@ -490,12 +487,12 @@ export default function FullscreenDisplay({
                   borderRadius: "0.75rem",
                   padding: isFullscreen
                     ? isCompact
-                      ? "0.45rem 0.6rem"
+                      ? "0.3rem 0.45rem"
                       : "0.6rem 0.75rem"
                     : "1rem",
                   marginBottom: isFullscreen
                     ? isCompact
-                      ? "0.4rem"
+                      ? "0.25rem"
                       : "0.5rem"
                     : "1rem",
                 }}
@@ -508,7 +505,8 @@ export default function FullscreenDisplay({
                         : "0.8rem"
                       : "1rem",
                     color: "#c4b5fd",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.3rem" : "0.5rem",
                     fontWeight: "600",
                   }}
                 >
@@ -592,12 +590,12 @@ export default function FullscreenDisplay({
                   borderRadius: "0.75rem",
                   padding: isFullscreen
                     ? isCompact
-                      ? "0.45rem 0.6rem"
+                      ? "0.3rem 0.45rem"
                       : "0.6rem 0.75rem"
                     : "1rem",
                   marginBottom: isFullscreen
                     ? isCompact
-                      ? "0.4rem"
+                      ? "0.25rem"
                       : "0.5rem"
                     : "1rem",
                 }}
@@ -610,7 +608,8 @@ export default function FullscreenDisplay({
                         : "0.875rem"
                       : "1rem",
                     color: "#94a3b8",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.3rem" : "0.5rem",
                     fontWeight: "600",
                   }}
                 >
@@ -693,12 +692,12 @@ export default function FullscreenDisplay({
                   borderRadius: "0.75rem",
                   padding: isFullscreen
                     ? isCompact
-                      ? "0.45rem 0.6rem"
+                      ? "0.3rem 0.45rem"
                       : "0.6rem 0.75rem"
                     : "1rem",
                   marginBottom: isFullscreen
                     ? isCompact
-                      ? "0.4rem"
+                      ? "0.25rem"
                       : "0.5rem"
                     : "1rem",
                 }}
@@ -711,7 +710,8 @@ export default function FullscreenDisplay({
                         : "0.8rem"
                       : "1rem",
                     color: "#fdba74",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.3rem" : "0.5rem",
                     fontWeight: "600",
                   }}
                 >
@@ -725,7 +725,8 @@ export default function FullscreenDisplay({
                         : "1rem"
                       : "1.25rem",
                     fontWeight: "bold",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.3rem" : "0.5rem",
                   }}
                 >
                   {currentBowler.name}
@@ -755,7 +756,7 @@ export default function FullscreenDisplay({
                   borderRadius: "0.75rem",
                   padding: isFullscreen
                     ? isCompact
-                      ? "0.45rem 0.6rem"
+                      ? "0.3rem 0.45rem"
                       : "0.6rem 0.75rem"
                     : "1rem",
                 }}
@@ -768,7 +769,8 @@ export default function FullscreenDisplay({
                         : "0.8rem"
                       : "1rem",
                     color: "#94a3b8",
-                    marginBottom: "0.5rem",
+                    marginBottom:
+                      isFullscreen && isCompact ? "0.3rem" : "0.5rem",
                     fontWeight: "600",
                   }}
                 >
