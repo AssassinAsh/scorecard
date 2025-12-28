@@ -1,6 +1,7 @@
 "use client";
 
 import type { Player } from "@/types";
+import SearchableSelect from "../SearchableSelect";
 
 export type { Player };
 
@@ -51,24 +52,20 @@ export function NewOverModal({
         <div className="mb-4">
           <label className="text-sm muted-text mb-1 block">Bowler *</label>
           <div className="flex gap-2">
-            <select
+            <SearchableSelect
               value={newOverBowlerId}
-              onChange={(e) => onBowlerChange(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-md text-sm"
-              style={{
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                color: "var(--foreground)",
-              }}
+              onChange={onBowlerChange}
+              options={[
+                { value: "", label: "Select bowler..." },
+                ...bowlingPlayers.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                })),
+              ]}
+              placeholder="Select bowler..."
+              className="flex-1"
               autoFocus
-            >
-              <option value="">Select bowler...</option>
-              {bowlingPlayers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            />
             <button
               onClick={onAddPlayer}
               className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
@@ -505,29 +502,23 @@ export function ChangePlayerModal({
         <div className="mb-3">
           <label className="text-sm muted-text mb-1 block">Striker *</label>
           <div className="flex gap-2">
-            <select
+            <SearchableSelect
               value={strikerId}
-              onChange={(e) => onStrikerChange(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-md text-sm"
-              style={{
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                color: "var(--foreground)",
-              }}
-            >
-              <option value="">Select striker...</option>
-              {availableBatters.map((p) => (
-                <option
-                  key={p.id}
-                  value={p.id}
-                  disabled={p.id === nonStrikerId}
-                >
-                  {p.name}
-                  {p.id === nonStrikerId ? " (selected as non-striker)" : ""}
-                  {retiredPlayerIds.has(p.id) ? " (retired)" : ""}
-                </option>
-              ))}
-            </select>
+              onChange={onStrikerChange}
+              options={[
+                { value: "", label: "Select striker..." },
+                ...availableBatters.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  disabled: p.id === nonStrikerId,
+                  metadata:
+                    (p.id === nonStrikerId ? "selected as non-striker" : "") +
+                    (retiredPlayerIds.has(p.id) ? " (retired)" : ""),
+                })),
+              ]}
+              placeholder="Select striker..."
+              className="flex-1"
+            />
             <button
               onClick={() => onAddPlayer("striker")}
               className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
@@ -542,25 +533,23 @@ export function ChangePlayerModal({
         <div className="mb-3">
           <label className="text-sm muted-text mb-1 block">Non-Striker *</label>
           <div className="flex gap-2">
-            <select
+            <SearchableSelect
               value={nonStrikerId}
-              onChange={(e) => onNonStrikerChange(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-md text-sm"
-              style={{
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                color: "var(--foreground)",
-              }}
-            >
-              <option value="">Select non-striker...</option>
-              {availableBatters.map((p) => (
-                <option key={p.id} value={p.id} disabled={p.id === strikerId}>
-                  {p.name}
-                  {p.id === strikerId ? " (selected as striker)" : ""}
-                  {retiredPlayerIds.has(p.id) ? " (retired)" : ""}
-                </option>
-              ))}
-            </select>
+              onChange={onNonStrikerChange}
+              options={[
+                { value: "", label: "Select non-striker..." },
+                ...availableBatters.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  disabled: p.id === strikerId,
+                  metadata:
+                    (p.id === strikerId ? "selected as striker" : "") +
+                    (retiredPlayerIds.has(p.id) ? " (retired)" : ""),
+                })),
+              ]}
+              placeholder="Select non-striker..."
+              className="flex-1"
+            />
             <button
               onClick={() => onAddPlayer("nonStriker")}
               className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"
@@ -575,23 +564,19 @@ export function ChangePlayerModal({
         <div className="mb-4">
           <label className="text-sm muted-text mb-1 block">Bowler *</label>
           <div className="flex gap-2">
-            <select
+            <SearchableSelect
               value={bowlerId}
-              onChange={(e) => onBowlerChange(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-md text-sm"
-              style={{
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                color: "var(--foreground)",
-              }}
-            >
-              <option value="">Select bowler...</option>
-              {bowlingPlayers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={onBowlerChange}
+              options={[
+                { value: "", label: "Select bowler..." },
+                ...bowlingPlayers.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                })),
+              ]}
+              placeholder="Select bowler..."
+              className="flex-1"
+            />
             <button
               onClick={() => onAddPlayer("bowler")}
               className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"

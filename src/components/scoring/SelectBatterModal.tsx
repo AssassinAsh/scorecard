@@ -1,6 +1,7 @@
 "use client";
 
 import type { Player } from "@/types";
+import SearchableSelect from "../SearchableSelect";
 
 interface SelectBatterModalProps {
   show: boolean;
@@ -55,25 +56,23 @@ export default function SelectBatterModal({
         <div className="mb-4">
           <label className="text-sm muted-text mb-1 block">Batter *</label>
           <div className="flex gap-2">
-            <select
+            <SearchableSelect
               value={selectedBatterId}
-              onChange={(e) => onSelectedBatterChange(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-md text-sm"
-              style={{
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                color: "var(--foreground)",
-              }}
-            >
-              <option value="">Select batter...</option>
-              {availableBatters.map((p) => (
-                <option key={p.id} value={p.id} disabled={p.id === otherEndId}>
-                  {p.name}
-                  {p.id === otherEndId ? " (at other end)" : ""}
-                  {retiredPlayerIds.has(p.id) ? " (retired)" : ""}
-                </option>
-              ))}
-            </select>
+              onChange={onSelectedBatterChange}
+              options={[
+                { value: "", label: "Select batter..." },
+                ...availableBatters.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  disabled: p.id === otherEndId,
+                  metadata:
+                    (p.id === otherEndId ? "at other end" : "") +
+                    (retiredPlayerIds.has(p.id) ? " (retired)" : ""),
+                })),
+              ]}
+              placeholder="Select batter..."
+              className="flex-1"
+            />
             <button
               onClick={onAddNew}
               className="px-3 py-2 rounded-md text-sm font-medium text-white whitespace-nowrap"

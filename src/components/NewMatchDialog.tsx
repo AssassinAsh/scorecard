@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createMatch } from "@/app/actions/matches";
 import { getTeamsByTournament, createTeam } from "@/app/actions/teams";
 import type { TeamInfo, MatchType } from "@/types";
+import SearchableSelect from "./SearchableSelect";
 
 interface NewMatchDialogProps {
   isOpen: boolean;
@@ -236,6 +237,10 @@ export default function NewMatchDialog({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Hidden inputs for form submission */}
+            <input type="hidden" name="team_a_id" value={selectedTeamA} />
+            <input type="hidden" name="team_b_id" value={selectedTeamB} />
+
             {/* Team A Selection */}
             <div>
               <label
@@ -246,29 +251,23 @@ export default function NewMatchDialog({
                 Team A *
               </label>
               <div className="flex gap-2">
-                <select
-                  id="team_a_id"
-                  name="team_a_id"
-                  required
+                <SearchableSelect
                   value={selectedTeamA}
-                  onChange={(e) => setSelectedTeamA(e.target.value)}
+                  onChange={setSelectedTeamA}
+                  options={[
+                    {
+                      value: "",
+                      label: loadingTeams ? "Loading..." : "Select Team A",
+                    },
+                    ...teams.map((team) => ({
+                      value: team.id,
+                      label: team.name,
+                    })),
+                  ]}
+                  placeholder={loadingTeams ? "Loading..." : "Select Team A"}
                   disabled={loadingTeams}
-                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                  style={{
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  <option value="">
-                    {loadingTeams ? "Loading..." : "Select Team A"}
-                  </option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
+                  className="flex-1"
+                />
                 <button
                   type="button"
                   onClick={() => setShowTeamAModal(true)}
@@ -290,29 +289,23 @@ export default function NewMatchDialog({
                 Team B *
               </label>
               <div className="flex gap-2">
-                <select
-                  id="team_b_id"
-                  name="team_b_id"
-                  required
+                <SearchableSelect
                   value={selectedTeamB}
-                  onChange={(e) => setSelectedTeamB(e.target.value)}
+                  onChange={setSelectedTeamB}
+                  options={[
+                    {
+                      value: "",
+                      label: loadingTeams ? "Loading..." : "Select Team B",
+                    },
+                    ...teams.map((team) => ({
+                      value: team.id,
+                      label: team.name,
+                    })),
+                  ]}
+                  placeholder={loadingTeams ? "Loading..." : "Select Team B"}
                   disabled={loadingTeams}
-                  className="flex-1 px-3 py-2 rounded-md focus:outline-none focus:ring-2 text-sm"
-                  style={{
-                    background: "var(--background)",
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  <option value="">
-                    {loadingTeams ? "Loading..." : "Select Team B"}
-                  </option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
+                  className="flex-1"
+                />
                 <button
                   type="button"
                   onClick={() => setShowTeamBModal(true)}

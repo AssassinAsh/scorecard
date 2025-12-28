@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { WicketType, Player } from "@/types";
+import SearchableSelect from "../SearchableSelect";
 
 interface WicketModalProps {
   show: boolean;
@@ -166,27 +167,23 @@ export default function WicketModal({
               {wicketType === "Stumps" ? "Keeper" : "Fielder"}
             </label>
             <div className="flex gap-2">
-              <select
+              <SearchableSelect
                 value={wicketType === "Stumps" ? keeperId : fielderId}
-                onChange={(e) =>
+                onChange={(value) =>
                   wicketType === "Stumps"
-                    ? onKeeperChange(e.target.value)
-                    : onFielderChange(e.target.value)
+                    ? onKeeperChange(value)
+                    : onFielderChange(value)
                 }
-                className="flex-1 px-3 py-2 rounded-md"
-                style={{
-                  background: "var(--background)",
-                  border: "1px solid var(--border)",
-                  color: "var(--foreground)",
-                }}
-              >
-                <option value="">Select...</option>
-                {fieldingPlayers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "Select..." },
+                  ...fieldingPlayers.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  })),
+                ]}
+                placeholder="Select..."
+                className="flex-1"
+              />
               <button
                 onClick={() =>
                   onAddPlayer(wicketType === "Stumps" ? "keeper" : "fielder")
