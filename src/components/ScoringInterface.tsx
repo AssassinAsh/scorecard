@@ -314,33 +314,49 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     isLegalBall(b.extras_type as ExtrasType)
   ).length;
 
+  // Whether the most recent delivery was a legal ball
+  const lastBallIsLegal =
+    !!latestBall && isLegalBall(latestBall.extras_type as ExtrasType);
+
   // Global over state is driven by innings.balls_bowled
   const totalLegalBalls = ballsBowled;
   const legalThisOver = totalLegalBalls === 0 ? 0 : totalLegalBalls % 6;
   // When over is complete (legalThisOver === 0) and needsNewOver is true, show empty
   const targetLegalForDisplay = legalThisOver;
 
-  const displayOverBalls: Ball[] = [];
-  if (targetLegalForDisplay > 0) {
-    let legalCount = 0;
-    for (const ball of recentBalls) {
-      // Push to keep most recent at the left (index 0)
-      displayOverBalls.push(ball);
-      if (isLegalBall(ball.extras_type as ExtrasType)) {
-        legalCount += 1;
-        if (legalCount >= targetLegalForDisplay) {
-          break;
-        }
-      }
-    }
-  }
-
   // A new over is needed whenever we've completed a multiple of 6 legal balls
   const needsNewOver =
     !readOnly &&
     totalLegalBalls > 0 &&
     totalLegalBalls % 6 === 0 &&
+    lastBallIsLegal &&
     !hasSetNewOver.current;
+
+  // Build "This Over" balls for display.
+  // If an over has just completed (needsNewOver), we intentionally
+  // show an empty "This Over" so the scorer can start the next one.
+  // Otherwise, always show the balls from the current over, including
+  // wides/no-balls even when no legal delivery has been bowled yet.
+  const displayOverBalls: Ball[] = [];
+  if (!needsNewOver) {
+    if (currentOverBalls.length > 0) {
+      // currentOverBalls is already ordered with most recent first
+      displayOverBalls.push(...currentOverBalls);
+    } else if (targetLegalForDisplay > 0) {
+      // Fallback: derive the segment from recentBalls if we don't have
+      // a current over context for some reason.
+      let legalCount = 0;
+      for (const ball of recentBalls) {
+        displayOverBalls.push(ball);
+        if (isLegalBall(ball.extras_type as ExtrasType)) {
+          legalCount += 1;
+          if (legalCount >= targetLegalForDisplay) {
+            break;
+          }
+        }
+      }
+    }
+  }
 
   // Get player names
   const strikerName =
