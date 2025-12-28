@@ -10,12 +10,14 @@ interface TournamentMatchListProps {
   matches: Array<{ match: Match; winnerText: string | null }>;
   user: any;
   isAdmin: boolean;
+  hasScorerAccess: boolean;
 }
 
 export default function TournamentMatchList({
   matches,
   user,
   isAdmin,
+  hasScorerAccess,
 }: TournamentMatchListProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
@@ -66,7 +68,7 @@ export default function TournamentMatchList({
       ) : (
         <div className="space-y-3">
           {filteredMatches.map(({ match, winnerText }) =>
-            user ? (
+            user && (hasScorerAccess || isAdmin) ? (
               <DashboardMatchCard
                 key={match.id}
                 match={match}

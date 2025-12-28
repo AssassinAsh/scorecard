@@ -176,6 +176,7 @@ async function TournamentPageContent({
           matches={matchesWithResult}
           user={user}
           isAdmin={admin}
+          hasScorerAccess={hasScorerAccess}
         />
       </main>
     </div>
