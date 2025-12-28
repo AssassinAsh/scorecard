@@ -753,8 +753,9 @@ export default function FullscreenDisplay({
                     color: "#94a3b8",
                   }}
                 >
-                  {currentBowler.overs} overs • {currentBowler.wickets}-
-                  {currentBowler.runs} • Econ: {currentBowler.economy}
+                  Over: {currentBowler.overs}, Runs: {currentBowler.runs},
+                  Wickets: {currentBowler.wickets}, Econ:{" "}
+                  {currentBowler.economy}
                 </div>
               </div>
             )}

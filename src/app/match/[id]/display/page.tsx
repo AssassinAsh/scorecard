@@ -197,8 +197,22 @@ async function DisplayPageContent({
       })
       .filter((row): row is LiveBowlingRow => row !== null);
 
-    // Get current bowler (from latest ball)
-    if (recentBalls.length > 0) {
+    // Get current bowler. Prefer the bowler from the latest over so that
+    // bowler changes (including a brand new over) are reflected even before
+    // the first ball of that over is bowled.
+    if (inningsDetail.overs && inningsDetail.overs.length > 0) {
+      const sortedOvers = [...inningsDetail.overs].sort(
+        (a: any, b: any) => a.over_number - b.over_number
+      );
+      const latestOver = sortedOvers[sortedOvers.length - 1];
+
+      if (latestOver?.bowler_id) {
+        currentBowler =
+          liveBowling.find((b) => b.playerId === latestOver.bowler_id) || null;
+      }
+    } else if (recentBalls.length > 0) {
+      // Fallback: derive from the latest ball's over if overs metadata
+      // is unavailable for some reason.
       const latestBall = recentBalls[0];
       const latestOver = inningsDetail.overs?.find(
         (o: any) => o.id === latestBall.over_id
