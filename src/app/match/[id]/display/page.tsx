@@ -288,40 +288,33 @@ async function DisplayPageContent({
   }
 
   // Get current over balls for display
-  const totalLegalBalls = displayInnings?.balls_bowled || 0;
   const displayOverBalls: string[] = [];
 
   if (recentBalls.length > 0) {
     const latestBall = recentBalls[0];
-    const lastBallIsLegal = isLegalBall(latestBall.extras_type);
-    const overJustCompleted =
-      totalLegalBalls > 0 && totalLegalBalls % 6 === 0 && lastBallIsLegal;
+    const currentOverId = latestBall.over_id;
+    const currentOverBalls = recentBalls.filter(
+      (b) => b.over_id === currentOverId
+    );
 
-    if (!overJustCompleted) {
-      const currentOverId = latestBall.over_id;
-      const currentOverBalls = recentBalls.filter(
-        (b) => b.over_id === currentOverId
-      );
-
-      for (const ball of currentOverBalls) {
-        let ballDisplay = "";
-        if (ball.wicket_type !== "None") {
-          ballDisplay = "W";
-        } else if (ball.runs_off_bat === 6) {
-          ballDisplay = "6";
-        } else if (ball.runs_off_bat === 4) {
-          ballDisplay = "4";
-        } else if (ball.extras_type === "Wide") {
-          ballDisplay = `Wd`;
-        } else if (ball.extras_type === "NoBall") {
-          ballDisplay = `Nb`;
-        } else {
-          ballDisplay = ball.runs_off_bat.toString();
-        }
-
-        // Keep most recent ball at the left, matching scorer UI
-        displayOverBalls.push(ballDisplay);
+    for (const ball of currentOverBalls) {
+      let ballDisplay = "";
+      if (ball.wicket_type !== "None") {
+        ballDisplay = "W";
+      } else if (ball.runs_off_bat === 6) {
+        ballDisplay = "6";
+      } else if (ball.runs_off_bat === 4) {
+        ballDisplay = "4";
+      } else if (ball.extras_type === "Wide") {
+        ballDisplay = `Wd`;
+      } else if (ball.extras_type === "NoBall") {
+        ballDisplay = `Nb`;
+      } else {
+        ballDisplay = ball.runs_off_bat.toString();
       }
+
+      // Keep most recent ball at the left, matching scorer UI
+      displayOverBalls.push(ballDisplay);
     }
   }
 

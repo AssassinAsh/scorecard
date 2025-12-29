@@ -638,59 +638,96 @@ export default function FullscreenDisplay({
                     flexWrap: "wrap",
                   }}
                 >
-                  {displayOverBalls.map((ball, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        width: isFullscreen
-                          ? isCompact
-                            ? "1.8rem"
-                            : "2.2rem"
-                          : "2.5rem",
-                        height: isFullscreen
-                          ? isCompact
-                            ? "1.8rem"
-                            : "2.2rem"
-                          : "2.5rem",
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: isFullscreen
-                          ? isCompact
-                            ? "0.95rem"
-                            : "1.1rem"
-                          : "1.5rem",
-                        fontWeight: "bold",
-                        background:
-                          ball === "W"
-                            ? "rgba(239, 68, 68, 0.3)"
-                            : ball === "6"
-                            ? "rgba(147, 51, 234, 0.3)"
-                            : ball === "4"
-                            ? "rgba(34, 197, 94, 0.3)"
-                            : "rgba(255, 255, 255, 0.1)",
-                        border:
-                          ball === "W"
-                            ? "2px solid #ef4444"
-                            : ball === "6"
-                            ? "2px solid #9333ea"
-                            : ball === "4"
-                            ? "2px solid #22c55e"
-                            : "2px solid rgba(255, 255, 255, 0.2)",
-                        color:
-                          ball === "W"
-                            ? "#fca5a5"
-                            : ball === "6"
-                            ? "#e9d5ff"
-                            : ball === "4"
-                            ? "#86efac"
-                            : "#ffffff",
-                      }}
-                    >
-                      {ball}
-                    </div>
-                  ))}
+                  {displayOverBalls.map((ball, index) => {
+                    // Calculate legal ball number (only count legal deliveries)
+                    const isLegal = ball !== "Wd" && ball !== "Nb";
+                    let legalBallNumber = 0;
+
+                    if (isLegal) {
+                      // Count how many legal balls have been bowled up to and including this one
+                      legalBallNumber = displayOverBalls
+                        .slice(index)
+                        .filter((b) => b !== "Wd" && b !== "Nb").length;
+                    }
+
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: isFullscreen
+                              ? isCompact
+                                ? "1.8rem"
+                                : "2.2rem"
+                              : "2.5rem",
+                            height: isFullscreen
+                              ? isCompact
+                                ? "1.8rem"
+                                : "2.2rem"
+                              : "2.5rem",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: isFullscreen
+                              ? isCompact
+                                ? "0.95rem"
+                                : "1.1rem"
+                              : "1.5rem",
+                            fontWeight: "bold",
+                            background:
+                              ball === "W"
+                                ? "rgba(239, 68, 68, 0.3)"
+                                : ball === "6"
+                                ? "rgba(147, 51, 234, 0.3)"
+                                : ball === "4"
+                                ? "rgba(34, 197, 94, 0.3)"
+                                : "rgba(255, 255, 255, 0.1)",
+                            border:
+                              ball === "W"
+                                ? "2px solid #ef4444"
+                                : ball === "6"
+                                ? "2px solid #9333ea"
+                                : ball === "4"
+                                ? "2px solid #22c55e"
+                                : "2px solid rgba(255, 255, 255, 0.2)",
+                            color:
+                              ball === "W"
+                                ? "#fca5a5"
+                                : ball === "6"
+                                ? "#e9d5ff"
+                                : ball === "4"
+                                ? "#86efac"
+                                : "#ffffff",
+                          }}
+                        >
+                          {ball}
+                        </div>
+                        {isLegal && (
+                          <div
+                            style={{
+                              fontSize: isFullscreen
+                                ? isCompact
+                                  ? "0.6rem"
+                                  : "0.7rem"
+                                : "0.75rem",
+                              color: "#94a3b8",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {legalBallNumber}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
