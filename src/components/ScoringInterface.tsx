@@ -15,6 +15,7 @@ import {
   calculateRequiredRunRate,
   formatRunRate,
   isLegalBall,
+  buildDisplayOverBalls,
 } from "@/lib/cricket/scoring";
 import type { Ball, Player, ExtrasType, WicketType } from "@/types";
 
@@ -332,31 +333,12 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     lastBallIsLegal &&
     !hasSetNewOver.current;
 
-  // Build "This Over" balls for display.
-  // If an over has just completed (needsNewOver), we intentionally
-  // show an empty "This Over" so the scorer can start the next one.
-  // Otherwise, always show the balls from the current over, including
-  // wides/no-balls even when no legal delivery has been bowled yet.
-  const displayOverBalls: Ball[] = [];
-  if (!needsNewOver) {
-    if (currentOverBalls.length > 0) {
-      // currentOverBalls is already ordered with most recent first
-      displayOverBalls.push(...currentOverBalls);
-    } else if (targetLegalForDisplay > 0) {
-      // Fallback: derive the segment from recentBalls if we don't have
-      // a current over context for some reason.
-      let legalCount = 0;
-      for (const ball of recentBalls) {
-        displayOverBalls.push(ball);
-        if (isLegalBall(ball.extras_type as ExtrasType)) {
-          legalCount += 1;
-          if (legalCount >= targetLegalForDisplay) {
-            break;
-          }
-        }
-      }
-    }
-  }
+  // Build "This Over" balls for display using shared utility
+  const displayOverBalls: Ball[] = buildDisplayOverBalls(
+    recentBalls,
+    totalLegalBalls,
+    needsNewOver
+  ) as Ball[];
 
   // Get player names
   const strikerName =

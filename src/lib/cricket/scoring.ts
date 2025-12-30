@@ -205,6 +205,33 @@ export function getBallDisplayText(
 }
 
 /**
+ * Build display over balls from recent balls.
+ * Returns balls for the current over that should be displayed.
+ * If needsNewOver is true (over just completed), returns empty array.
+ */
+export function buildDisplayOverBalls(
+  recentBalls: Array<{
+    over_id: string;
+    extras_type: string;
+    [key: string]: any;
+  }>,
+  totalLegalBalls: number,
+  needsNewOver: boolean = false
+): any[] {
+  if (needsNewOver || recentBalls.length === 0) {
+    return [];
+  }
+
+  const latestBall = recentBalls[0];
+  const currentOverId = latestBall.over_id;
+  const currentOverBalls = recentBalls.filter(
+    (b) => b.over_id === currentOverId
+  );
+
+  return currentOverBalls;
+}
+
+/**
  * Validate ball input before saving.
  * Returns error message if invalid, null if valid.
  */

@@ -5,6 +5,7 @@ import {
   formatScore,
   formatOvers,
   calculateOvers,
+  getBallDisplayText,
 } from "@/lib/cricket/scoring";
 
 interface FullscreenDisplayProps {
@@ -51,7 +52,7 @@ interface FullscreenDisplayProps {
     wickets: number;
     economy: string;
   } | null;
-  displayOverBalls: string[];
+  displayOverBalls: any[];
   matchResult: string | null;
   isFreeHit: boolean;
 }
@@ -639,16 +640,35 @@ export default function FullscreenDisplay({
                   }}
                 >
                   {displayOverBalls.map((ball, index) => {
+                    // Get display text from utility function
+                    const ballText = getBallDisplayText(
+                      ball.runs_off_bat,
+                      ball.extras_type,
+                      ball.extras_runs,
+                      ball.wicket_type
+                    );
+
                     // Calculate legal ball number (only count legal deliveries)
-                    const isLegal = ball !== "Wd" && ball !== "Nb";
+                    const isLegal =
+                      ball.extras_type !== "Wide" &&
+                      ball.extras_type !== "NoBall";
                     let legalBallNumber = 0;
 
                     if (isLegal) {
                       // Count how many legal balls have been bowled up to and including this one
                       legalBallNumber = displayOverBalls
                         .slice(index)
-                        .filter((b) => b !== "Wd" && b !== "Nb").length;
+                        .filter(
+                          (b) =>
+                            b.extras_type !== "Wide" &&
+                            b.extras_type !== "NoBall"
+                        ).length;
                     }
+
+                    // Determine if it's a wicket or boundary
+                    const isWicket = ball.wicket_type !== "None";
+                    const isSix = ball.runs_off_bat === 6;
+                    const isFour = ball.runs_off_bat === 4;
 
                     return (
                       <div
@@ -682,33 +702,30 @@ export default function FullscreenDisplay({
                                 : "1.1rem"
                               : "1.5rem",
                             fontWeight: "bold",
-                            background:
-                              ball === "W"
-                                ? "rgba(239, 68, 68, 0.3)"
-                                : ball === "6"
-                                ? "rgba(147, 51, 234, 0.3)"
-                                : ball === "4"
-                                ? "rgba(34, 197, 94, 0.3)"
-                                : "rgba(255, 255, 255, 0.1)",
-                            border:
-                              ball === "W"
-                                ? "2px solid #ef4444"
-                                : ball === "6"
-                                ? "2px solid #9333ea"
-                                : ball === "4"
-                                ? "2px solid #22c55e"
-                                : "2px solid rgba(255, 255, 255, 0.2)",
-                            color:
-                              ball === "W"
-                                ? "#fca5a5"
-                                : ball === "6"
-                                ? "#e9d5ff"
-                                : ball === "4"
-                                ? "#86efac"
-                                : "#ffffff",
+                            background: isWicket
+                              ? "rgba(239, 68, 68, 0.3)"
+                              : isSix
+                              ? "rgba(147, 51, 234, 0.3)"
+                              : isFour
+                              ? "rgba(34, 197, 94, 0.3)"
+                              : "rgba(255, 255, 255, 0.1)",
+                            border: isWicket
+                              ? "2px solid #ef4444"
+                              : isSix
+                              ? "2px solid #9333ea"
+                              : isFour
+                              ? "2px solid #22c55e"
+                              : "2px solid rgba(255, 255, 255, 0.2)",
+                            color: isWicket
+                              ? "#fca5a5"
+                              : isSix
+                              ? "#e9d5ff"
+                              : isFour
+                              ? "#86efac"
+                              : "#ffffff",
                           }}
                         >
-                          {ball}
+                          {ballText}
                         </div>
                         {isLegal && (
                           <div
