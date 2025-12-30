@@ -13,6 +13,7 @@ interface ScoringControlsProps {
   onDeleteLastBall: () => void;
   onChangeStrike: () => void;
   onRetireBatsman: () => void;
+  onRunOutNoBall: () => void;
   onChangeBowler: () => void;
   onStartNewOver: () => void;
 }
@@ -29,6 +30,7 @@ export default function ScoringControls({
   onDeleteLastBall,
   onChangeStrike,
   onRetireBatsman,
+  onRunOutNoBall,
   onChangeBowler,
   onStartNewOver,
 }: ScoringControlsProps) {
@@ -99,7 +101,23 @@ export default function ScoringControls({
               </button>
             )}
 
-            {/* 3. Delete Last Delivery Button */}
+            {/* 3. Run Out (No Ball) Button */}
+            {(strikerId || nonStrikerId) && (
+              <button
+                onClick={onRunOutNoBall}
+                disabled={isRecording}
+                className="py-3 rounded-md text-sm font-medium disabled:opacity-50"
+                style={{
+                  background: "var(--background)",
+                  border: "1px solid var(--border)",
+                  color: "var(--foreground)",
+                }}
+              >
+                🏃 Run Out (Without Ball)
+              </button>
+            )}
+
+            {/* 4. Delete Last Delivery Button */}
             {hasRecentBalls && (
               <button
                 onClick={onDeleteLastBall}
@@ -115,7 +133,7 @@ export default function ScoringControls({
               </button>
             )}
 
-            {/* 4. Change Player Button */}
+            {/* 5. Change Player Button */}
             {(strikerId || nonStrikerId || bowlerId) && (
               <button
                 onClick={onChangeBowler}

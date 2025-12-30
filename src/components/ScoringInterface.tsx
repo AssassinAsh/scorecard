@@ -902,6 +902,13 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
             setRetiringPlayerRole(null);
             setShowRetireModal(true);
           }}
+          onRunOutNoBall={() => {
+            // Open wicket modal pre-filled with Run Out type
+            setCurrentAction("wicket");
+            setWicketType("RunOut");
+            setSelectedRuns(0);
+            setShowWicketTypeModal(true);
+          }}
           onChangeBowler={() => {
             setTempStrikerId(strikerId);
             setTempNonStrikerId(nonStrikerId);
