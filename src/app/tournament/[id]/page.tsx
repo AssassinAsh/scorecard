@@ -52,7 +52,10 @@ async function TournamentPageContent({
 
   const matches = await getMatchesByTournament(id);
 
-  // Sort matches by status: Live > Starting Soon > Upcoming > Innings Break > Completed
+  // Sort matches by:
+  // 1. Last updated (most recent first)
+  // 2. Status: Live > Starting Soon > Upcoming > Innings Break > Completed
+  // 3. Match date (most recent first)
   const statusOrder = {
     Live: 1,
     "Starting Soon": 2,
@@ -61,13 +64,21 @@ async function TournamentPageContent({
     Completed: 5,
   };
   const sortedMatches = matches.sort((a, b) => {
+    // First, sort by updated_at (most recent first)
+    const updatedA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const updatedB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    if (updatedA !== updatedB) {
+      return updatedB - updatedA;
+    }
+
+    // Then by status
     const orderA = statusOrder[a.status as keyof typeof statusOrder] || 4;
     const orderB = statusOrder[b.status as keyof typeof statusOrder] || 4;
     if (orderA !== orderB) {
       return orderA - orderB;
     }
 
-    // Within same status, sort by match_date (most recent first)
+    // Finally by match_date (most recent first)
     const timeA = a.match_date ? new Date(a.match_date).getTime() : 0;
     const timeB = b.match_date ? new Date(b.match_date).getTime() : 0;
     return timeB - timeA;
