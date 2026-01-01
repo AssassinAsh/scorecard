@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getTournaments, isAdmin } from "./actions/tournaments";
 import { getUser } from "./actions/auth";
 import NewTournamentButton from "@/components/NewTournamentButton";
+import NewYearPopup from "@/components/NewYearPopup";
 import { RootSkeleton } from "@/components/Skeletons";
 
 export default function Home() {
@@ -20,6 +21,9 @@ async function HomeContent() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* New Year 2026 Popup */}
+      <NewYearPopup />
+
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 sm:px-6">
         <div className="flex justify-between items-center mb-3 sm:mb-4">

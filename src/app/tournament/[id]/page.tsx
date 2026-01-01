@@ -7,6 +7,7 @@ import {
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { createClient } from "@/lib/supabase/server";
 import NewMatchButton from "@/components/NewMatchButton";
+import NewYearPopup from "@/components/NewYearPopup";
 import { TournamentSkeleton } from "@/components/Skeletons";
 import TournamentMatchList from "@/components/TournamentMatchList";
 
@@ -141,6 +142,9 @@ async function TournamentPageContent({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* New Year 2026 Popup */}
+      <NewYearPopup />
+
       {/* Spectator Mode Banner */}
       {user && !hasScorerAccess && (
         <div className="max-w-4xl mx-auto px-4 py-4">
