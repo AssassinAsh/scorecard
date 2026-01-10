@@ -160,6 +160,16 @@ keeper_id UUID REFERENCES players(id) ON DELETE CASCADE,
 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+create table if not exists public.profiles (
+  id         text primary key,                -- matches Profile.ID
+  email      text not null,                  -- Profile.Email
+  full_name  text,                           -- Profile.FullName
+  role       text not null default 'viewer', -- Profile.Role
+  status     text not null default 'active', -- Profile.Status (as text enum)
+  created_at timestamptz not null default now(), -- Profile.CreatedAt
+  updated_at timestamptz not null default now()  -- Profile.UpdatedAt
+);
+
 -- =====================
 -- INDEXES
 -- =====================

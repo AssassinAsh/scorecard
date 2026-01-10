@@ -1,14 +1,63 @@
 "use client";
 
-import { useState, useActionState } from "react";
-import { loginFromDialog } from "@/app/actions/auth";
-import LoginSubmitButton from "@/components/LoginSubmitButton";
-
-const initialState = { error: null as string | null };
+import { useState } from "react";
+import { loginWithEmailPassword, loginWithGoogle } from "@/lib/firebase/client";
 
 export default function LoginDialog() {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState(loginFromDialog, initialState);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEmailPasswordLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    try {
+      setLoading(true);
+      const { idToken } = await loginWithEmailPassword(email, password);
+
+      await fetch("/api/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token: idToken }),
+      });
+
+      setOpen(false);
+      // Reload to let server components pick up new session
+      window.location.reload();
+    } catch (err: any) {
+      setError(err?.message || "Failed to sign in.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+
+    try {
+      setLoading(true);
+      const { idToken } = await loginWithGoogle();
+
+      await fetch("/api/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token: idToken }),
+      });
+
+      setOpen(false);
+      window.location.reload();
+    } catch (err: any) {
+      setError(err?.message || "Failed to sign in with Google.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -45,8 +94,7 @@ export default function LoginDialog() {
                 ✕
               </button>
             </div>
-
-            <form action={formAction} className="space-y-4">
+            <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
               <div>
                 <label
                   htmlFor="dialog-email"
@@ -67,6 +115,8 @@ export default function LoginDialog() {
                     color: "var(--foreground)",
                   }}
                   placeholder="scorer@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
@@ -90,10 +140,12 @@ export default function LoginDialog() {
                     color: "var(--foreground)",
                   }}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
-              {state.error && (
+              {error && (
                 <div
                   className="rounded-md p-3 text-sm"
                   style={{
@@ -102,12 +154,47 @@ export default function LoginDialog() {
                     color: "var(--danger)",
                   }}
                 >
-                  {state.error}
+                  {error}
                 </div>
               )}
 
-              <LoginSubmitButton />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 rounded-md font-medium text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: "var(--accent)",
+                }}
+              >
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
             </form>
+
+            <div className="mt-4 flex items-center justify-center">
+              <span className="h-px flex-1 bg-[var(--border)]" />
+              <span className="mx-3 text-xs muted-text">OR</span>
+              <span className="h-px flex-1 bg-[var(--border)]" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="mt-4 w-full py-2.5 px-4 rounded-md font-medium text-sm border flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--background)",
+                color: "var(--foreground)",
+              }}
+            >
+              <span>Continue with Google</span>
+            </button>
+
+            <div
+              id="firebase-recaptcha-container"
+              className="mt-2"
+              aria-hidden="true"
+            />
 
             <p className="mt-4 text-sm text-center muted-text">
               Only registered scorers can log in

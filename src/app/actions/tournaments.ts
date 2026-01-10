@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "./auth";
 import type { CreateTournamentForm } from "@/types";
 
 export async function createTournament(formData: CreateTournamentForm) {
@@ -41,20 +42,9 @@ export async function createTournament(formData: CreateTournamentForm) {
 }
 
 export async function isAdmin() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const { data } = await supabase
-    .from("user_roles")
-    .select("is_admin")
-    .eq("user_id", user.id)
-    .single();
-
-  return data?.is_admin || false;
+  const user = await getUser();
+  if (!user || !Array.isArray(user.roles)) return false;
+  return user.roles.includes("admin");
 }
 
 export async function hasAccess(tournamentId: string) {
