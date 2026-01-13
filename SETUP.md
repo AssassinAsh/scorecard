@@ -495,7 +495,7 @@ src/app/
 
 ## 🚀 Deployment to Production
 
-### Option 1: Netlify (Recommended)
+### Option 1: Vercel (Recommended)
 
 1. Push code to GitHub:
 
@@ -505,13 +505,20 @@ src/app/
    git push origin main
    ```
 
-2. Go to [netlify.com](https://www.netlify.com/)
-3. Click **"Import Project"**
+2. Go to [vercel.com](https://vercel.com/)
+3. Click **"Import Project"** or **"Add New Project"**
 4. Select your GitHub repository
-5. Add environment variables:
+5. Configure project:
+   - Framework Preset: Next.js (auto-detected)
+   - Root Directory: `./` (default)
+6. Add environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-6. Click **"Deploy"**
+7. Click **"Deploy"**
+8. (Optional) Add custom domain:
+   - Go to Project Settings → Domains
+   - Add your domain (e.g., `www.cricksnap.com`)
+   - Configure DNS records as instructed by Vercel
 
 ### Option 2: Self-Host
 

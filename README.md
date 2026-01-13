@@ -2,7 +2,7 @@
 
 A full-stack cricket scoring application built with Next.js 14, TypeScript, Tailwind CSS, and Supabase. Designed for scorers to manage live cricket matches with real-time ball-by-ball scoring, while providing public access to live scoreboards.
 
-**Live Demo**: https://sscore.netlify.app  
+**Live Demo**: https://www.cricksnap.com  
 **GitHub**: https://github.com/AssassinAsh/scorecard
 
 ## ✨ Features
@@ -254,14 +254,15 @@ formatScore(runs: number, wickets: number): string
 
 ## 🚢 Deployment
 
-### Deploy to Netlify
+### Deploy to Vercel
 
 1. Push your code to GitHub
-2. Import project in [Netlify](https://www.netlify.com/)
-3. Add environment variables in Netlify dashboard:
+2. Import project in [Vercel](https://vercel.com/)
+3. Add environment variables in Vercel project settings:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. Deploy!
+5. (Optional) Configure custom domain in Vercel dashboard
 
 ### Build Locally
 

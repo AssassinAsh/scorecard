@@ -18,7 +18,7 @@
 
 1. In Admin, under **Property**, click **Data Streams**
 2. Click **Add stream** → **Web**
-3. Enter your website URL (e.g., `https://your-domain.com`)
+3. Enter your website URL (e.g., `https://www.cricksnap.com`)
 4. Stream name: "Cricket Scorecard Web"
 5. Click **Create stream**
 6. Copy the **Measurement ID** (format: `G-XXXXXXXXXX`)
