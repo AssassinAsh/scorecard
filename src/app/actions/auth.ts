@@ -59,3 +59,29 @@ export async function getUser() {
   } = await supabase.auth.getUser();
   return user;
 }
+
+export async function signInWithGoogle() {
+  const supabase = await createClient();
+
+  // Get the origin from headers or use localhost as fallback
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (data.url) {
+    redirect(data.url);
+  }
+}

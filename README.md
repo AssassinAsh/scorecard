@@ -9,6 +9,8 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 ### 🔐 Role-Based Access Control
 
+- **Google Authentication**: Sign-in with Google Identity Services (client-side, no redirect)
+- **User Profiles**: Email, name, role, and credits management
 - **Admin**: Full system access - create tournaments, manage matches, delete matches, score anywhere
 - **Manager**: Create tournaments and matches, score in any tournament (cannot delete matches)
 - **Scorer**: Create matches and score in assigned tournaments only
@@ -79,56 +81,71 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
    - Go to SQL Editor in your Supabase dashboard
    - Copy and paste the entire `supabase-schema.sql` file
    - Click Run
+   - Run `user-profiles-migration.sql` to create profile tables
 
-4. **Create User Accounts and Assign Roles**
+4. **Configure Google Authentication**
 
-   - Go to Authentication → Users in Supabase
-   - Click "Add user" to create accounts
-   - Assign roles in SQL Editor:
+   - Create Google Cloud Console OAuth 2.0 Client ID
+   - Get Client ID from Google Cloud Console
+   - Add to `.env.local`: `NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id`
+   - Enable Google provider in Supabase Authentication
+   - Users sign in with Google using client-side authentication
+
+5. **Assign User Roles**
+
+   After users sign in with Google for the first time, assign roles:
 
    **For Admin (full access):**
 
    ```sql
-   INSERT INTO user_roles (user_id, role)
-   VALUES ('your-user-id-here', 'Admin');
+   UPDATE user_profiles
+   SET role = 'Admin'::user_role
+   WHERE email = 'admin@example.com';
    ```
 
    **For Manager (can create tournaments):**
 
    ```sql
-   INSERT INTO user_roles (user_id, role)
-   VALUES ('your-user-id-here', 'Manager');
+   UPDATE user_profiles
+   SET role = 'Manager'::user_role
+   WHERE email = 'manager@example.com';
    ```
 
    **For Scorer (tournament-specific access):**
 
    ```sql
-   INSERT INTO user_roles (user_id, role)
-   VALUES ('your-user-id-here', 'Scorer');
+   UPDATE user_profiles
+   SET role = 'Scorer'::user_role
+   WHERE email = 'scorer@example.com';
    -- Also grant tournament access:
    INSERT INTO tournament_scorers (tournament_id, user_id)
-   VALUES ('tournament-uuid', 'scorer-user-uuid');
+   VALUES ('tournament-uuid', (SELECT user_id FROM user_profiles WHERE email = 'scorer@example.com'));
    ```
 
    **For Viewer (public view only):**
+   All new users are automatically assigned the "Viewer" role on first sign-in. No action needed.
+
+   **List all users:**
 
    ```sql
-   INSERT INTO user_roles (user_id, role)
-   VALUES ('your-user-id-here', 'Viewer');
+   SELECT email, role FROM user_profiles ORDER BY created_at DESC;
    ```
 
-5. **Configure environment variables**
+6. **Configure environment variables**
 
    Create a `.env.local` file in the root directory:
 
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_oauth_client_id
+   NEXT_PUBLIC_SITE_URL=http://localhost:3000
    ```
 
-   Get these values from: Project Settings → API in your Supabase dashboard
+   Get Supabase values from: Project Settings → API in your Supabase dashboard
+   Get Google Client ID from: Google Cloud Console → APIs & Services → Credentials
 
-6. **Run the development server**
+7. **Run the development server**
 
    ```bash
    npm run dev
@@ -162,18 +179,19 @@ See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation
 
 ### Scorer Users
 
-1. **Login** at `/login` with your scorer credentials
-2. **View Tournaments**: See all tournaments
-3. **Tournament Access**:
+1. **Sign In** at `/login` with your Google account
+2. **Complete Profile**: Add your name during onboarding (first sign-in only)
+3. **View Tournaments**: See all tournaments
+4. **Tournament Access**:
    - Can create matches and score in assigned tournaments
    - Read-only "spectator mode" for tournaments without access
-4. **Create Match** under accessible tournaments
-5. **Setup Match**:
+5. **Create Match** under accessible tournaments
+6. **Setup Match**:
    - Add team names
    - Set overs per innings
    - Configure toss details
-6. **Add Players** (11 per team)
-7. **Start Scoring**:
+7. **Add Players** (11 per team)
+8. **Start Scoring**:
    - Select striker, non-striker, and bowler
    - Record each ball with run buttons or extras
    - Handle wickets with detailed dismissal forms
@@ -181,10 +199,11 @@ See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation
 
 ### Viewer Users
 
-1. **Login** at `/login` with viewer credentials
-2. **Browse**: View all tournaments and matches
-3. **Fullscreen Display**: Access `/match/[id]/display` for fullscreen mode
-4. **Public Pages**: Same access as unauthenticated users for scorecards
+1. **Sign In** at `/login` with your Google account
+2. **Complete Profile**: Add your name during onboarding (first sign-in only)
+3. **Browse**: View all tournaments and matches
+4. **Fullscreen Display**: Access `/match/[id]/display` for fullscreen mode
+5. **Public Pages**: Same access as unauthenticated users for scorecards
 
 ### Public Access (Unauthenticated)
 

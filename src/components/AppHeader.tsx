@@ -1,9 +1,17 @@
 import { getUser, logout } from "@/app/actions/auth";
+import { getProfile } from "@/app/actions/profile";
 import LoginDialog from "./LoginDialog";
 import BackButton from "./BackButton";
+import Link from "next/link";
 
 export default async function AppHeader() {
   const user = await getUser();
+  const profile = user ? await getProfile() : null;
+
+  const displayName =
+    profile?.first_name && profile?.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile?.email || user?.email;
 
   return (
     <header className="cricket-card sticky top-0 z-20 border-b">
@@ -17,9 +25,12 @@ export default async function AppHeader() {
         <div className="flex items-center gap-3 flex-shrink-0">
           {user ? (
             <>
-              <span className="text-sm muted-text hidden sm:inline max-w-[180px] truncate">
-                {user.email}
-              </span>
+              <Link
+                href="/profile"
+                className="text-sm muted-text hidden sm:inline max-w-[180px] truncate hover:underline"
+              >
+                {displayName}
+              </Link>
               <form action={logout}>
                 <button
                   type="submit"

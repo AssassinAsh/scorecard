@@ -7,16 +7,17 @@
 -- 2. Go to SQL Editor in your Supabase dashboard
 -- 3. Copy and paste this ENTIRE file
 -- 4. Click 'Run' to create all tables, functions, and policies
+-- 5. Run user-profiles-migration.sql to create user_profiles table
 --
 -- This creates:
 -- - Core database structure (tournaments, teams, matches, players, etc.)
--- - Admin role system (user_roles table)
+-- - Role-based access control system (user_profiles table)
 -- - Tournament access control (tournament_scorers table)
 -- - Row Level Security (RLS) policies
 -- - Helper functions for access checks
 --
--- After running, create your admin account:
--- INSERT INTO user_roles (user_id, is_admin) VALUES ('your-user-id', true);
+-- After running, users sign in with Google OAuth and profiles are auto-created.
+-- Assign roles by updating user_profiles table.
 -- =====================================================
 
 -- =====================
@@ -319,21 +320,30 @@ EXECUTE FUNCTION update_match_status();
 -- ACCESS CONTROL SYSTEM
 -- =====================================================
 
--- User Roles Table (Admin system)
-CREATE TABLE IF NOT EXISTS user_roles (
+-- User Profiles Table (User data and access control)
+CREATE TABLE IF NOT EXISTS user_profiles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  is_admin BOOLEAN DEFAULT false, -- Kept for backward compatibility during migration
-  role user_role NOT NULL DEFAULT 'Viewer', -- New role-based system
-  created_at TIMESTAMPTZ DEFAULT now()
+  email TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  role user_role NOT NULL DEFAULT 'Viewer',
+  credits INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX idx_user_roles_admin ON user_roles(is_admin) WHERE is_admin = true;
-CREATE INDEX idx_user_roles_role ON user_roles(role);
+CREATE INDEX idx_user_profiles_role ON user_profiles(role);
+CREATE INDEX idx_user_profiles_email ON user_profiles(email);
 
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can read own role"
-  ON user_roles FOR SELECT
+CREATE POLICY "Users can read own profile"
+  ON user_profiles FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can update own profile"
+  ON user_profiles FOR UPDATE
   TO authenticated
   USING (user_id = auth.uid());
 
@@ -362,7 +372,7 @@ RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 
-    FROM user_roles 
+    FROM user_profiles 
     WHERE user_id = auth.uid() 
     AND role = 'Admin'
   );
@@ -375,7 +385,7 @@ RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 
-    FROM user_roles 
+    FROM user_profiles 
     WHERE user_id = auth.uid() 
     AND role IN ('Admin', 'Manager')
   );
@@ -389,7 +399,7 @@ DECLARE
   user_role_result user_role;
 BEGIN
   SELECT role INTO user_role_result
-  FROM user_roles 
+  FROM user_profiles 
   WHERE user_id = auth.uid();
   
   RETURN COALESCE(user_role_result, 'Viewer'::user_role);
@@ -404,7 +414,7 @@ DECLARE
 BEGIN
   -- Get user's role
   SELECT role INTO user_role_value
-  FROM user_roles 
+  FROM user_profiles 
   WHERE user_id = auth.uid();
   
   -- Admin and Manager have access to all tournaments
@@ -431,27 +441,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- SETUP INSTRUCTIONS
 -- =====================================================
 -- 
--- After running this schema, create user accounts and assign roles:
+-- After running this schema:
 -- 
--- 1. Create a user in Authentication > Users
--- 2. Assign role in SQL Editor:
+-- 1. Run user-profiles-migration.sql to create user_profiles table
+-- 2. Configure Google OAuth in Supabase Authentication settings
+-- 3. Users sign in with Google, profiles auto-created with 'Viewer' role
+-- 4. Assign roles in SQL Editor:
 --
 --    For Admin (full access):
---    INSERT INTO user_roles (user_id, role) 
---    VALUES ('your-user-id-here', 'Admin');
+--    UPDATE user_profiles 
+--    SET role = 'Admin'::user_role 
+--    WHERE email = 'admin@example.com';
 --
 --    For Manager (can create tournaments, score everywhere):
---    INSERT INTO user_roles (user_id, role) 
---    VALUES ('your-user-id-here', 'Manager');
+--    UPDATE user_profiles 
+--    SET role = 'Manager'::user_role 
+--    WHERE email = 'manager@example.com';
 --
 --    For Scorer (tournament-specific access):
---    INSERT INTO user_roles (user_id, role) 
---    VALUES ('your-user-id-here', 'Scorer');
+--    UPDATE user_profiles 
+--    SET role = 'Scorer'::user_role 
+--    WHERE email = 'scorer@example.com';
 --    -- Also grant tournament access:
 --    INSERT INTO tournament_scorers (tournament_id, user_id) 
---    VALUES ('tournament-id', 'scorer-user-id');
+--    VALUES ('tournament-id', (SELECT user_id FROM user_profiles WHERE email = 'scorer@example.com'));
 --
---    For Viewer (public view only):
---    INSERT INTO user_roles (user_id, role) 
---    VALUES ('your-user-id-here', 'Viewer');
 -- =====================================================

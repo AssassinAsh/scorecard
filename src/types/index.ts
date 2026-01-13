@@ -39,6 +39,59 @@ export interface UserRoleData {
   is_admin?: boolean; // Keep for backward compatibility during migration
   created_at: string;
 }
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: UserRole;
+  credits: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserWithProfile {
+  id: string;
+  email: string;
+  profile: UserProfile | null;
+  role: UserRoleData | null;
+}
+
+export interface UpdateProfileForm {
+  first_name: string;
+  last_name: string;
+}
+
+export interface TournamentAccess {
+  tournament_id: string;
+  tournament_name: string;
+  granted_at: string;
+}
+export interface UserProfile {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserWithProfile {
+  id: string;
+  email: string;
+  profile: UserProfile | null;
+  role: UserRoleData | null;
+}
+
+export interface UpdateProfileForm {
+  first_name: string;
+  last_name: string;
+}
+
+export interface TournamentAccess {
+  tournament_id: string;
+  tournament_name: string;
+  granted_at: string;
+}
 
 export interface TeamInfo {
   id: string;

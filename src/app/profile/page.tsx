@@ -1,0 +1,130 @@
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getUser } from "@/app/actions/auth";
+import { getProfile, getUserTournamentAccess } from "@/app/actions/profile";
+import { getUserRole } from "@/app/actions/tournaments";
+import ProfileEditor from "@/components/ProfileEditor";
+import Link from "next/link";
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+async function ProfileContent() {
+  const user = await getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const [profile, role, tournamentAccess] = await Promise.all([
+    getProfile(),
+    getUserRole(),
+    getUserTournamentAccess(),
+  ]);
+
+  return (
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Profile</h1>
+          <Link
+            href="/"
+            className="text-sm px-4 py-2 rounded-md"
+            style={{
+              border: "1px solid var(--border)",
+              color: "var(--foreground)",
+            }}
+          >
+            Back to Home
+          </Link>
+        </div>
+
+        <div className="space-y-6">
+          {/* User Info */}
+          <div className="cricket-card p-6">
+            <h2 className="text-lg font-semibold mb-4">Account Information</h2>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm" style={{ color: "var(--muted)" }}>
+                  Email
+                </label>
+                <p className="font-medium">{profile?.email || user.email}</p>
+              </div>
+
+              <div>
+                <label className="text-sm" style={{ color: "var(--muted)" }}>
+                  Role
+                </label>
+                <p className="font-medium capitalize">
+                  {profile?.role || role}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm" style={{ color: "var(--muted)" }}>
+                  Credits
+                </label>
+                <p className="font-medium">{profile?.credits ?? 0}</p>
+              </div>
+
+              <div>
+                <label className="text-sm" style={{ color: "var(--muted)" }}>
+                  Name
+                </label>
+                <p className="font-medium">
+                  {profile?.first_name || profile?.last_name
+                    ? `${profile.first_name || ""} ${
+                        profile.last_name || ""
+                      }`.trim()
+                    : "Not set"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Edit Profile */}
+          <ProfileEditor
+            firstName={profile?.first_name || ""}
+            lastName={profile?.last_name || ""}
+          />
+
+          {/* Tournament Access (for Scorers) */}
+          {role === "Scorer" && (
+            <div className="cricket-card p-6">
+              <h2 className="text-lg font-semibold mb-4">Tournament Access</h2>
+
+              {tournamentAccess.length === 0 ? (
+                <p style={{ color: "var(--muted)" }}>
+                  No tournament access granted yet. Contact an admin to request
+                  access.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {tournamentAccess.map((access) => (
+                    <div
+                      key={access.tournament_id}
+                      className="p-3 rounded-md"
+                      style={{ background: "var(--background)" }}
+                    >
+                      <p className="font-medium">{access.tournament_name}</p>
+                      <p className="text-sm" style={{ color: "var(--muted)" }}>
+                        Granted{" "}
+                        {new Date(access.granted_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
