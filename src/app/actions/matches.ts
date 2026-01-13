@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAdmin } from "../actions/tournaments";
+import { isAdmin, hasAccess } from "../actions/tournaments";
 import type {
   CreateMatchForm,
   TossDetailsForm,
@@ -21,6 +21,12 @@ export async function createMatch(formData: CreateMatchForm) {
   } = await supabase.auth.getUser();
   if (!user) {
     return { error: "Unauthorized" };
+  }
+
+  // Check if user has access to this tournament
+  const access = await hasAccess(formData.tournament_id);
+  if (!access) {
+    return { error: "No permission to create matches in this tournament" };
   }
 
   const { data, error } = await supabase

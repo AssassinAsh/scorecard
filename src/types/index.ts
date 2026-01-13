@@ -1,5 +1,8 @@
 // Database Types matching Supabase schema
 
+// User Roles for access control
+export type UserRole = "Admin" | "Manager" | "Scorer" | "Viewer";
+
 export type MatchStatus =
   | "Upcoming"
   | "Starting Soon"
@@ -28,6 +31,13 @@ export interface Tournament {
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface UserRoleData {
+  user_id: string;
+  role: UserRole;
+  is_admin?: boolean; // Keep for backward compatibility during migration
+  created_at: string;
 }
 
 export interface TeamInfo {

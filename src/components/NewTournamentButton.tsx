@@ -3,8 +3,17 @@
 import { useState } from "react";
 import NewTournamentDialog from "./NewTournamentDialog";
 
-export default function NewTournamentButton() {
+interface NewTournamentButtonProps {
+  canCreate: boolean;
+}
+
+export default function NewTournamentButton({
+  canCreate,
+}: NewTournamentButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Only render if user can create tournaments (Admin or Manager)
+  if (!canCreate) return null;
 
   return (
     <>

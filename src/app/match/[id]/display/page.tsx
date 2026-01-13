@@ -72,16 +72,17 @@ async function DisplayPageContent({
 }) {
   const { id } = await params;
 
-  // Require authentication for the display route, but do not enforce
-  // scorer/admin permissions. Any logged-in user can view the
-  // fullscreen display.
+  // Require authentication for fullscreen display
+  // All authenticated users (Admin, Manager, Scorer, Viewer) can access
+  // Public/unauthenticated users are redirected to public scorecard
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    // Redirect unauthenticated users to public match scorecard
+    redirect(`/match/${id}`);
   }
 
   // Parallelize independent queries for faster page loads

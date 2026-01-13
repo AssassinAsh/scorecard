@@ -7,9 +7,17 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 ## ✨ Features
 
-### 🎯 For Authenticated Scorers
+### 🔐 Role-Based Access Control
 
-- **Tournament Management**: Create and organize tournaments with multiple matches
+- **Admin**: Full system access - create tournaments, manage matches, delete matches, score anywhere
+- **Manager**: Create tournaments and matches, score in any tournament (cannot delete matches)
+- **Scorer**: Create matches and score in assigned tournaments only
+- **Viewer**: View-only access with fullscreen display capability
+- **Public**: Browse tournaments and matches, view live scorecards
+
+### 🎯 For Authenticated Users
+
+- **Tournament Management**: Create and organize tournaments (Admin & Manager)
 - **Match Setup**: Configure matches with team names, overs, toss details
 - **Player Management**: Add players to teams, manage batting orders
 - **Live Ball-by-Ball Scoring**:
@@ -21,6 +29,8 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
   - Player retirement handling
 - **Undo Functionality**: Remove the last ball if needed
 - **Match Completion**: Automatic innings and match result calculation
+- **Fullscreen Display**: Access fullscreen mode for matches (authenticated users only)
+- **QR Code Generation**: Generate and download QR codes for tournaments
 
 ### 👥 For Public Viewers
 
@@ -70,15 +80,41 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
    - Copy and paste the entire `supabase-schema.sql` file
    - Click Run
 
-4. **Create Admin Account**
+4. **Create User Accounts and Assign Roles**
 
    - Go to Authentication → Users in Supabase
-   - Click "Add user" to create your account
-   - Note the user ID, then run in SQL Editor:
+   - Click "Add user" to create accounts
+   - Assign roles in SQL Editor:
+
+   **For Admin (full access):**
 
    ```sql
-   INSERT INTO user_roles (user_id, is_admin)
-   VALUES ('your-user-id-here', true);
+   INSERT INTO user_roles (user_id, role)
+   VALUES ('your-user-id-here', 'Admin');
+   ```
+
+   **For Manager (can create tournaments):**
+
+   ```sql
+   INSERT INTO user_roles (user_id, role)
+   VALUES ('your-user-id-here', 'Manager');
+   ```
+
+   **For Scorer (tournament-specific access):**
+
+   ```sql
+   INSERT INTO user_roles (user_id, role)
+   VALUES ('your-user-id-here', 'Scorer');
+   -- Also grant tournament access:
+   INSERT INTO tournament_scorers (tournament_id, user_id)
+   VALUES ('tournament-uuid', 'scorer-user-uuid');
+   ```
+
+   **For Viewer (public view only):**
+
+   ```sql
+   INSERT INTO user_roles (user_id, role)
+   VALUES ('your-user-id-here', 'Viewer');
    ```
 
 5. **Configure environment variables**
@@ -102,26 +138,34 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 ## 📖 Usage Guide
 
-### Admin User
+### User Roles Overview
 
-The admin account has full system access:
+| Role        | Create Tournaments | Create Matches   | Delete Matches | Score            | Fullscreen Display |
+| ----------- | ------------------ | ---------------- | -------------- | ---------------- | ------------------ |
+| **Admin**   | ✅ All             | ✅ All           | ✅ All         | ✅ All           | ✅ Yes             |
+| **Manager** | ✅ All             | ✅ All           | ❌ No          | ✅ All           | ✅ Yes             |
+| **Scorer**  | ❌ No              | ✅ Assigned only | ❌ No          | ✅ Assigned only | ✅ Yes             |
+| **Viewer**  | ❌ No              | ❌ No            | ❌ No          | ❌ No            | ✅ Yes             |
+| **Public**  | ❌ No              | ❌ No            | ❌ No          | ❌ No            | ❌ No              |
 
-- **Create Tournaments**: Only admins can create new tournaments
-- **Full Access**: Automatic scorer access to all tournaments
-- **Grant Access**: Assign scorers to specific tournaments via SQL:
-  ```sql
-  INSERT INTO tournament_scorers (tournament_id, user_id)
-  VALUES ('tournament-uuid', 'scorer-user-uuid');
-  ```
+### Admin & Manager Users
+
+Admin and Manager accounts have elevated privileges:
+
+- **Create Tournaments**: Can create new tournaments
+- **Full Match Access**: Can create matches in any tournament
+- **Universal Scoring**: Can score in any match
+- **Delete Matches**: Only Admin can delete matches
+- **Fullscreen Display**: Access to fullscreen mode for live matches
 
 See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation.
 
-### For Scorers
+### Scorer Users
 
 1. **Login** at `/login` with your scorer credentials
-2. **View Tournaments**: See all tournaments in the dashboard
-3. **Scorer Access**: Click a tournament you have access to
-   - Can create matches and score if you have access
+2. **View Tournaments**: See all tournaments
+3. **Tournament Access**:
+   - Can create matches and score in assigned tournaments
    - Read-only "spectator mode" for tournaments without access
 4. **Create Match** under accessible tournaments
 5. **Setup Match**:
@@ -135,12 +179,20 @@ See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation
    - Handle wickets with detailed dismissal forms
    - System automatically manages strike rotation and over completion
 
-### For Viewers
+### Viewer Users
+
+1. **Login** at `/login` with viewer credentials
+2. **Browse**: View all tournaments and matches
+3. **Fullscreen Display**: Access `/match/[id]/display` for fullscreen mode
+4. **Public Pages**: Same access as unauthenticated users for scorecards
+
+### Public Access (Unauthenticated)
 
 1. Visit the home page to see all tournaments
 2. Click a tournament to see its matches
 3. Click a match to view the live scorecard
 4. Scorecard auto-refreshes every 5 seconds during live matches
+5. Generate QR codes for tournaments to share match links
 
 ## 📁 Project Structure
 

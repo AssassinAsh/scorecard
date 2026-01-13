@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getTournaments, isAdmin } from "./actions/tournaments";
+import { getTournaments, canCreateTournament } from "./actions/tournaments";
 import { getUser } from "./actions/auth";
 import NewTournamentButton from "@/components/NewTournamentButton";
 import TournamentQrButton from "@/components/TournamentQrButton";
@@ -17,7 +17,9 @@ export default function Home() {
 async function HomeContent() {
   const tournaments = await getTournaments();
   const user = await getUser();
-  const admin = user ? await isAdmin() : false;
+
+  // Check if user can create tournaments (Admin or Manager)
+  const canCreate = user ? await canCreateTournament() : false;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
@@ -27,7 +29,7 @@ async function HomeContent() {
           <h2 className="text-lg sm:text-xl font-medium team-name">
             Tournaments
           </h2>
-          {admin && <NewTournamentButton />}
+          <NewTournamentButton canCreate={canCreate} />
         </div>
 
         {tournaments.length === 0 ? (

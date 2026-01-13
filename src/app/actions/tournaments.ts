@@ -3,7 +3,42 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { CreateTournamentForm } from "@/types";
+import type { CreateTournamentForm, UserRole } from "@/types";
+
+// Get current user's role
+export async function getUserRole(): Promise<UserRole> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return "Viewer";
+
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+
+  return (data?.role as UserRole) || "Viewer";
+}
+
+// Check if user is Admin
+export async function isAdmin(): Promise<boolean> {
+  const role = await getUserRole();
+  return role === "Admin";
+}
+
+// Check if user is Manager or Admin
+export async function isManager(): Promise<boolean> {
+  const role = await getUserRole();
+  return role === "Admin" || role === "Manager";
+}
+
+// Check if user can create tournaments (Admin or Manager)
+export async function canCreateTournament(): Promise<boolean> {
+  return await isManager();
+}
 
 export async function createTournament(formData: CreateTournamentForm) {
   const supabase = await createClient();
@@ -15,10 +50,10 @@ export async function createTournament(formData: CreateTournamentForm) {
     return { error: "Unauthorized" };
   }
 
-  // Only admin can create tournaments
-  const admin = await isAdmin();
-  if (!admin) {
-    return { error: "Only admin can create tournaments" };
+  // Only Admin and Manager can create tournaments
+  const canCreate = await canCreateTournament();
+  if (!canCreate) {
+    return { error: "Only Admin and Manager can create tournaments" };
   }
 
   const { data, error } = await supabase
@@ -40,7 +75,7 @@ export async function createTournament(formData: CreateTournamentForm) {
   redirect(`/tournament/${data.id}`);
 }
 
-export async function isAdmin() {
+export async function hasAccess(tournamentId: string): Promise<boolean> {
   const supabase = await createClient();
 
   const {
@@ -48,36 +83,27 @@ export async function isAdmin() {
   } = await supabase.auth.getUser();
   if (!user) return false;
 
-  const { data } = await supabase
-    .from("user_roles")
-    .select("is_admin")
-    .eq("user_id", user.id)
-    .single();
+  const role = await getUserRole();
 
-  return data?.is_admin || false;
-}
+  // Admin and Manager have access to all tournaments
+  if (role === "Admin" || role === "Manager") {
+    return true;
+  }
 
-export async function hasAccess(tournamentId: string) {
-  const supabase = await createClient();
+  // Scorers need explicit tournament access
+  if (role === "Scorer") {
+    const { data } = await supabase
+      .from("tournament_scorers")
+      .select("id")
+      .eq("tournament_id", tournamentId)
+      .eq("user_id", user.id)
+      .single();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
+    return !!data;
+  }
 
-  // Admins have access to everything
-  const admin = await isAdmin();
-  if (admin) return true;
-
-  // Otherwise check tournament_scorers table
-  const { data } = await supabase
-    .from("tournament_scorers")
-    .select("id")
-    .eq("tournament_id", tournamentId)
-    .eq("user_id", user.id)
-    .single();
-
-  return !!data;
+  // Viewers have no access
+  return false;
 }
 
 export async function getTournaments() {

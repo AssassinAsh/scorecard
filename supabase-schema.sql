@@ -47,6 +47,9 @@ CREATE TYPE team_side AS ENUM ('A', 'B');
 CREATE TYPE extras_type AS ENUM ('Wide', 'NoBall', 'Bye', 'LegBye', 'None');
 CREATE TYPE wicket_type AS ENUM ('Bowled', 'Caught', 'RunOut', 'Stumps', 'HitWicket', 'LBW', 'None');
 
+-- User role enum for RBAC
+CREATE TYPE user_role AS ENUM ('Admin', 'Manager', 'Scorer', 'Viewer');
+
 -- =====================
 -- TABLES
 -- =====================
@@ -319,11 +322,13 @@ EXECUTE FUNCTION update_match_status();
 -- User Roles Table (Admin system)
 CREATE TABLE IF NOT EXISTS user_roles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  is_admin BOOLEAN DEFAULT false,
+  is_admin BOOLEAN DEFAULT false, -- Kept for backward compatibility during migration
+  role user_role NOT NULL DEFAULT 'Viewer', -- New role-based system
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX idx_user_roles_admin ON user_roles(is_admin) WHERE is_admin = true;
+CREATE INDEX idx_user_roles_role ON user_roles(role);
 
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
@@ -359,21 +364,66 @@ BEGIN
     SELECT 1 
     FROM user_roles 
     WHERE user_id = auth.uid() 
-    AND is_admin = true
+    AND role = 'Admin'
   );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function: Check if user has manager privileges (Admin or Manager)
+CREATE OR REPLACE FUNCTION is_manager()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM user_roles 
+    WHERE user_id = auth.uid() 
+    AND role IN ('Admin', 'Manager')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function: Get current user's role
+CREATE OR REPLACE FUNCTION get_user_role()
+RETURNS user_role AS $$
+DECLARE
+  user_role_result user_role;
+BEGIN
+  SELECT role INTO user_role_result
+  FROM user_roles 
+  WHERE user_id = auth.uid();
+  
+  RETURN COALESCE(user_role_result, 'Viewer'::user_role);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Helper function: Check if user has scorer access to a tournament
 CREATE OR REPLACE FUNCTION has_scorer_access(tournament_uuid UUID)
 RETURNS BOOLEAN AS $$
+DECLARE
+  user_role_value user_role;
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 
-    FROM tournament_scorers 
-    WHERE tournament_id = tournament_uuid 
-    AND user_id = auth.uid()
-  );
+  -- Get user's role
+  SELECT role INTO user_role_value
+  FROM user_roles 
+  WHERE user_id = auth.uid();
+  
+  -- Admin and Manager have access to all tournaments
+  IF user_role_value IN ('Admin', 'Manager') THEN
+    RETURN true;
+  END IF;
+  
+  -- Scorers need explicit tournament access
+  IF user_role_value = 'Scorer' THEN
+    RETURN EXISTS (
+      SELECT 1 
+      FROM tournament_scorers 
+      WHERE tournament_id = tournament_uuid 
+      AND user_id = auth.uid()
+    );
+  END IF;
+  
+  -- Viewers have no scorer access
+  RETURN false;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -381,14 +431,27 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- SETUP INSTRUCTIONS
 -- =====================================================
 -- 
--- After running this schema, create your admin account:
+-- After running this schema, create user accounts and assign roles:
 -- 
 -- 1. Create a user in Authentication > Users
--- 2. Run this SQL with your user ID:
---    INSERT INTO user_roles (user_id, is_admin) 
---    VALUES ('your-user-id-here', true);
+-- 2. Assign role in SQL Editor:
 --
--- To grant scorer access to tournaments:
+--    For Admin (full access):
+--    INSERT INTO user_roles (user_id, role) 
+--    VALUES ('your-user-id-here', 'Admin');
+--
+--    For Manager (can create tournaments, score everywhere):
+--    INSERT INTO user_roles (user_id, role) 
+--    VALUES ('your-user-id-here', 'Manager');
+--
+--    For Scorer (tournament-specific access):
+--    INSERT INTO user_roles (user_id, role) 
+--    VALUES ('your-user-id-here', 'Scorer');
+--    -- Also grant tournament access:
 --    INSERT INTO tournament_scorers (tournament_id, user_id) 
 --    VALUES ('tournament-id', 'scorer-user-id');
+--
+--    For Viewer (public view only):
+--    INSERT INTO user_roles (user_id, role) 
+--    VALUES ('your-user-id-here', 'Viewer');
 -- =====================================================
