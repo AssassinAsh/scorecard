@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { getTournaments, isAdmin } from "./actions/tournaments";
 import { getUser } from "./actions/auth";
 import NewTournamentButton from "@/components/NewTournamentButton";
-import NewYearPopup from "@/components/NewYearPopup";
+import TournamentQrButton from "@/components/TournamentQrButton";
 import { RootSkeleton } from "@/components/Skeletons";
 
 export default function Home() {
@@ -21,9 +21,6 @@ async function HomeContent() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      {/* New Year 2026 Popup */}
-      <NewYearPopup />
-
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 sm:px-6">
         <div className="flex justify-between items-center mb-3 sm:mb-4">
@@ -48,7 +45,7 @@ async function HomeContent() {
                 <h3 className="text-base sm:text-lg font-medium team-name mb-2">
                   {tournament.name}
                 </h3>
-                <div className="flex flex-wrap gap-3 text-sm muted-text">
+                <div className="flex flex-wrap items-center gap-3 text-sm muted-text">
                   <span className="flex items-center gap-1">
                     <span className="text-base">📍</span>
                     {tournament.location}
@@ -64,6 +61,11 @@ async function HomeContent() {
                       }
                     )}
                   </span>
+                  <TournamentQrButton
+                    tournamentId={tournament.id}
+                    tournamentName={tournament.name}
+                    tournamentLocation={tournament.location}
+                  />
                 </div>
               </Link>
             ))}
