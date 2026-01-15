@@ -8,6 +8,7 @@ import {
   retireBatsman,
   updateOverBowler,
   unretireBatsman,
+  completeInnings,
 } from "@/app/actions/scoring";
 import { createPlayer, updatePlayerName } from "@/app/actions/matches";
 import {
@@ -189,6 +190,21 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     }
   }, [latestOverId, currentOverId, recentBalls]);
 
+  // Check if innings should be completed on page load/refresh
+  useEffect(() => {
+    if (!readOnly && !matchResult) {
+      // Import the shouldEndInnings function logic inline to avoid circular deps
+      const maxBalls = props.maxOvers * 6;
+      const maxWickets = 10;
+      const shouldComplete =
+        ballsBowled >= maxBalls || currentWickets >= maxWickets;
+
+      if (shouldComplete) {
+        setShowCompleteInningsButton(true);
+      }
+    }
+  }, []); // Run only once on mount
+
   // Player management
   const [newPlayerName, setNewPlayerName] = useState("");
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -247,6 +263,11 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
     "striker" | "nonStriker" | null
   >(null);
   const [isRetiring, setIsRetiring] = useState(false);
+
+  // Complete innings state
+  const [showCompleteInningsButton, setShowCompleteInningsButton] =
+    useState(false);
+  const [isCompletingInnings, setIsCompletingInnings] = useState(false);
 
   // Edit player names modal
   const [showEditNamesModal, setShowEditNamesModal] = useState(false);
@@ -326,10 +347,13 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
   const targetLegalForDisplay = legalThisOver;
 
   // A new over is needed whenever we've completed a multiple of 6 legal balls
+  // BUT NOT if all overs have been bowled (ballsBowled >= maxOvers * 6)
+  const maxBalls = props.maxOvers * 6;
   const needsNewOver =
     !readOnly &&
     totalLegalBalls > 0 &&
     totalLegalBalls % 6 === 0 &&
+    totalLegalBalls < maxBalls && // Don't need new over if all overs complete
     lastBallIsLegal &&
     !hasSetNewOver.current;
 
@@ -521,11 +545,39 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         alert(result?.error || "Error deleting last delivery");
         return;
       }
+      // After deleting, hide complete innings button since we may not be at the end anymore
+      setShowCompleteInningsButton(false);
     } catch (error) {
       alert("Error deleting last delivery: " + error);
     } finally {
       setIsDeletingLastBall(false);
       setShowDeleteLastBallModal(false);
+    }
+  };
+
+  // Complete the innings manually
+  const handleCompleteInnings = async () => {
+    if (!inningsId) return;
+
+    const confirmed = confirm(
+      "Are you sure you want to complete this innings? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    setIsCompletingInnings(true);
+    try {
+      const result = await completeInnings(inningsId);
+      if (!result || (result as { error?: string }).error) {
+        alert(result?.error || "Error completing innings");
+        return;
+      }
+      setShowCompleteInningsButton(false);
+      alert("Innings completed successfully!");
+    } catch (error) {
+      alert("Error completing innings: " + error);
+    } finally {
+      setIsCompletingInnings(false);
     }
   };
 
@@ -741,10 +793,9 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
           setNonStrikerId(temp);
         }
 
-        // Handle innings end
+        // Handle innings end - show button instead of auto-completing
         if (result.shouldEndInnings) {
-          alert("Innings completed!");
-          hasSetNewOver.current = true;
+          setShowCompleteInningsButton(true);
         }
 
         // Reset modals
@@ -824,6 +875,49 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
         matchResult={matchResult}
       />
 
+      {/* Complete Innings Button */}
+      {!readOnly && showCompleteInningsButton && (
+        <div className="cricket-card p-4 sm:p-6">
+          <div className="text-center space-y-3">
+            <div
+              className="text-lg sm:text-xl font-semibold"
+              style={{ color: "var(--warning)" }}
+            >
+              ⚠️ Innings Can Be Completed
+            </div>
+            <p className="text-sm muted-text">
+              All {props.maxOvers} overs have been bowled or all wickets have
+              fallen. You can delete the last ball if needed, or complete the
+              innings.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => setShowDeleteLastBallModal(true)}
+                disabled={isCompletingInnings || recentBalls.length === 0}
+                className="px-6 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  border: "2px solid var(--border)",
+                  color: "var(--foreground)",
+                  background: "var(--card-bg)",
+                }}
+              >
+                ❌ Delete Last Ball
+              </button>
+              <button
+                onClick={handleCompleteInnings}
+                disabled={isCompletingInnings}
+                className="px-6 py-3 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 shadow-md"
+                style={{ background: "var(--success)" }}
+              >
+                {isCompletingInnings
+                  ? "⏳ Completing..."
+                  : "✅ Complete Innings"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Full Scorecard */}
       <FullScorecard
         teamAName={teamAName}
@@ -880,7 +974,7 @@ export default function ScoringInterface(props: ScoringInterfaceProps) {
       )}
 
       {/* Scoring Controls */}
-      {!readOnly && currentOverId && (
+      {!readOnly && currentOverId && !showCompleteInningsButton && (
         <ScoringControls
           isRecording={isRecording}
           needsNewOver={needsNewOver}

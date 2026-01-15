@@ -79,10 +79,15 @@ export default function TournamentQrButton({
   ) => {
     e.preventDefault();
     e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
     setIsOpen(true);
   };
 
-  const handleClose = () => {
+  const handleClose = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setIsOpen(false);
   };
 
@@ -101,40 +106,46 @@ export default function TournamentQrButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-sm"
-        style={{
-          border: "1px solid var(--accent)",
-          color: "var(--accent)",
-          background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      <div onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105 active:scale-95 shadow-sm"
+          style={{
+            border: "1px solid var(--accent)",
+            color: "var(--accent)",
+            background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+          }}
         >
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </svg>
-        <span>QR Code</span>
-      </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span>QR Code</span>
+        </button>
+      </div>
 
       {isOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0, 0, 0, 0.6)" }}
-          onClick={handleClose}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleClose();
+          }}
         >
           <div
             className="rounded-xl p-6 w-full max-w-md flex flex-col items-center gap-5 shadow-2xl"
@@ -148,7 +159,11 @@ export default function TournamentQrButton({
               <h2 className="text-lg font-semibold">Tournament QR Code</h2>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleClose();
+                }}
                 className="text-2xl leading-none hover:opacity-70 transition-opacity"
                 style={{ color: "var(--muted)" }}
               >

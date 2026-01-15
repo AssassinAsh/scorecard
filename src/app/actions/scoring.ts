@@ -226,7 +226,9 @@ export async function recordBall(ballData: CreateBallForm) {
   // Update innings aggregates
   const newTotalRuns = innings.total_runs + totalRuns;
   const newWickets = innings.wickets + hasWicket;
-  let inningsCompleted = shouldEndInnings(
+
+  // Check if innings SHOULD end (but don't auto-complete it)
+  const shouldComplete = shouldEndInnings(
     newBallsBowled,
     newWickets,
     innings.matches.overs_per_innings
@@ -235,25 +237,21 @@ export async function recordBall(ballData: CreateBallForm) {
   // Use pre-fetched allInnings from parallel query above
   const { data: allInnings } = allInningsResult;
 
+  let inningsCompleted = false;
+
   if (allInnings && allInnings.length > 0) {
     const firstInnings = allInnings[0];
 
-    // If current innings IS the first, handle innings break when completed
+    // If current innings IS the first, DO NOT auto-complete
+    // User will manually complete via button
     if (firstInnings.id === innings.id) {
-      if (inningsCompleted) {
-        await supabase
-          .from("matches")
-          .update({ status: "Innings Break" })
-          .eq("id", innings.match_id);
-
-        revalidatePath(`/match/${innings.match_id}`);
-        revalidatePath(`/match/${innings.match_id}/score`);
-      }
+      // First innings: never auto-complete, let user click button
+      inningsCompleted = false;
     } else {
       // Otherwise we're in a chase scenario (second innings)
       const target = firstInnings.total_runs + 1;
 
-      // Chasing team has reached or passed the target
+      // Chasing team has reached or passed the target - AUTO COMPLETE
       if (newTotalRuns >= target) {
         inningsCompleted = true;
 
@@ -265,32 +263,13 @@ export async function recordBall(ballData: CreateBallForm) {
 
         revalidatePath(`/match/${innings.match_id}`);
       } else if (
-        // Innings naturally completed (all balls / all out) and scores level
-        inningsCompleted &&
-        newTotalRuns === firstInnings.total_runs
+        // Second innings: all wickets fallen, DO NOT auto-complete
+        // Let user manually complete
+        shouldComplete &&
+        newWickets >= 10
       ) {
-        // Draw (tie): mark match as completed with no winner
-        await supabase
-          .from("matches")
-          .update({ status: "Completed", winner_team: null })
-          .eq("id", innings.match_id);
-
-        revalidatePath(`/match/${innings.match_id}`);
-      } else if (
-        // Innings completed and chasing side fell short of the target
-        inningsCompleted &&
-        newTotalRuns < firstInnings.total_runs
-      ) {
-        // Defending side wins: first-innings batting team is the winner
-        await supabase
-          .from("matches")
-          .update({
-            status: "Completed",
-            winner_team: firstInnings.batting_team,
-          })
-          .eq("id", innings.match_id);
-
-        revalidatePath(`/match/${innings.match_id}`);
+        // All out in second innings - don't auto complete
+        inningsCompleted = false;
       }
     }
   }
@@ -321,7 +300,7 @@ export async function recordBall(ballData: CreateBallForm) {
   return {
     data: ball,
     rotateStrike,
-    shouldEndInnings: inningsCompleted,
+    shouldEndInnings: shouldComplete, // Return the check, not the actual completion state
     isLegalBall: isLegal,
   };
 }
@@ -773,6 +752,95 @@ export async function deleteLastBall(inningsId: string) {
     if (matchUpdateError) {
       return { error: matchUpdateError.message };
     }
+  }
+
+  revalidatePath(`/match/${innings.match_id}/score`);
+  revalidatePath(`/match/${innings.match_id}`);
+
+  return { success: true };
+}
+
+// Manually complete an innings and update match status
+export async function completeInnings(inningsId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+
+  // Get innings details
+  const { data: innings, error: inningsError } = await supabase
+    .from("innings")
+    .select("*, matches(*)")
+    .eq("id", inningsId)
+    .single();
+
+  if (inningsError || !innings) {
+    return { error: "Innings not found" };
+  }
+
+  // Check if already completed
+  if (innings.is_completed) {
+    return { error: "Innings is already completed" };
+  }
+
+  // Get all innings for this match
+  const { data: allInnings, error: allInningsError } = await supabase
+    .from("innings")
+    .select("*")
+    .eq("match_id", innings.match_id)
+    .order("created_at", { ascending: true });
+
+  if (allInningsError || !allInnings) {
+    return { error: "Failed to fetch innings data" };
+  }
+
+  const firstInnings = allInnings[0];
+  const isFirstInnings = firstInnings.id === innings.id;
+
+  // Mark innings as completed
+  const { error: updateError } = await supabase
+    .from("innings")
+    .update({ is_completed: true })
+    .eq("id", inningsId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  // Update match status based on which innings was completed
+  if (isFirstInnings) {
+    // First innings completed - set to Innings Break
+    await supabase
+      .from("matches")
+      .update({ status: "Innings Break" })
+      .eq("id", innings.match_id);
+  } else {
+    // Second innings completed - determine winner
+    const target = firstInnings.total_runs + 1;
+    const chasingScore = innings.total_runs;
+
+    let matchStatus: "Completed" = "Completed";
+    let winnerTeam: "A" | "B" | null = null;
+
+    if (chasingScore >= target) {
+      // Chasing team won
+      winnerTeam = innings.batting_team;
+    } else if (chasingScore === firstInnings.total_runs) {
+      // Tie
+      winnerTeam = null;
+    } else {
+      // Defending team won
+      winnerTeam = firstInnings.batting_team;
+    }
+
+    await supabase
+      .from("matches")
+      .update({ status: matchStatus, winner_team: winnerTeam })
+      .eq("id", innings.match_id);
   }
 
   revalidatePath(`/match/${innings.match_id}/score`);

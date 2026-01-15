@@ -23,36 +23,78 @@ async function HomeContent() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {/* Hero Section */}
+      <div
+        className="cricket-card mx-3 sm:mx-auto max-w-5xl mt-4 sm:mt-6 p-6 sm:p-8 text-center"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)",
+          borderColor: "var(--accent)",
+          borderWidth: "2px",
+        }}
+      >
+        <h2
+          className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 sm:mb-3"
+          style={{ color: "var(--foreground)" }}
+        >
+          Welcome to CrickSnap 🏏
+        </h2>
+        <p className="text-sm sm:text-base lg:text-lg muted-text max-w-2xl mx-auto">
+          Real-time cricket scoring made simple. Create tournaments, score
+          matches live, and share scorecards instantly.
+        </p>
+      </div>
+
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-4 sm:py-6 sm:px-6">
-        <div className="flex justify-between items-center mb-3 sm:mb-4">
-          <h2 className="text-lg sm:text-xl font-medium team-name">
-            Tournaments
-          </h2>
+      <main className="max-w-5xl mx-auto px-3 py-4 sm:py-6 sm:px-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div>
+            <h3 className="text-xl sm:text-2xl font-semibold team-name mb-1">
+              Tournaments
+            </h3>
+            <p className="text-xs sm:text-sm muted-text">
+              {tournaments.length}{" "}
+              {tournaments.length === 1 ? "tournament" : "tournaments"}{" "}
+              available
+            </p>
+          </div>
           <NewTournamentButton canCreate={canCreate} />
         </div>
 
         {tournaments.length === 0 ? (
-          <div className="cricket-card p-6 text-center muted-text">
-            No tournaments available yet
+          <div className="cricket-card p-8 sm:p-12 text-center">
+            <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">🏏</div>
+            <p className="text-base sm:text-lg muted-text mb-2">
+              No tournaments available yet
+            </p>
+            <p className="text-xs sm:text-sm muted-text">
+              Create your first tournament to get started!
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {tournaments.map((tournament) => (
               <Link
                 key={tournament.id}
                 href={`/tournament/${tournament.id}`}
-                className="cricket-card block p-4 sm:p-5 hover:shadow-lg transition-all"
+                className="cricket-card-interactive block p-4 sm:p-6 group"
               >
-                <h3 className="text-base sm:text-lg font-medium team-name mb-2">
-                  {tournament.name}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3 text-sm muted-text">
-                  <span className="flex items-center gap-1">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold team-name group-hover:text-[var(--accent)] transition-colors flex-1 pr-2">
+                    {tournament.name}
+                  </h3>
+                  <TournamentQrButton
+                    tournamentId={tournament.id}
+                    tournamentName={tournament.name}
+                    tournamentLocation={tournament.location}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm muted-text">
+                  <span className="flex items-center gap-1.5">
                     <span className="text-base">📍</span>
-                    {tournament.location}
+                    <span className="truncate">{tournament.location}</span>
                   </span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <span className="text-base">📅</span>
                     {new Date(tournament.start_date).toLocaleDateString(
                       "en-US",
@@ -63,11 +105,6 @@ async function HomeContent() {
                       }
                     )}
                   </span>
-                  <TournamentQrButton
-                    tournamentId={tournament.id}
-                    tournamentName={tournament.name}
-                    tournamentLocation={tournament.location}
-                  />
                 </div>
               </Link>
             ))}

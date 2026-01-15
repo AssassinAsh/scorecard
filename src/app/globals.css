@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f9fa;
-  --foreground: #202124;
+  --background: #f0f4f8;
+  --foreground: #1e293b;
   --card-bg: #ffffff;
-  --border: #e8eaed;
-  --muted: #5f6368;
-  --accent: #1a73e8;
-  --success: #1e8e3e;
-  --danger: #d93025;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+  --cricket-green: #22c55e;
+  --cricket-blue: #3b82f6;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 @theme inline {
@@ -20,14 +27,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #202124;
-    --foreground: #e8eaed;
-    --card-bg: #292a2d;
-    --border: #3c4043;
-    --muted: #9aa0a6;
-    --accent: #8ab4f8;
-    --success: #81c995;
-    --danger: #f28b82;
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --card-bg: #1e293b;
+    --border: #334155;
+    --muted: #94a3b8;
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #fbbf24;
+    --cricket-green: #4ade80;
+    --cricket-blue: #60a5fa;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
   }
 }
 
@@ -67,8 +81,33 @@ button[type="reset"] {
 .cricket-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.cricket-card:hover {
+  box-shadow: var(--shadow);
+}
+
+.cricket-card-interactive {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.cricket-card-interactive:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.cricket-card-interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow);
 }
 
 .score-large {

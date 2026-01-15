@@ -18,8 +18,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cricket Scorecard",
-  description: "Live cricket scoring application",
+  title: "CrickSnap - Live Cricket Scoring",
+  description:
+    "Real-time cricket scoring made simple. Create tournaments, score matches live, and share scorecards instantly.",
+  keywords: [
+    "cricket",
+    "scoring",
+    "live score",
+    "cricket scorecard",
+    "tournament",
+  ],
+  authors: [{ name: "Ashvin Rokade" }],
+  openGraph: {
+    title: "CrickSnap - Live Cricket Scoring",
+    description: "Real-time cricket scoring made simple",
+    type: "website",
+    url: "https://www.cricksnap.com",
+  },
 };
 
 export default function RootLayout({
