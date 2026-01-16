@@ -210,6 +210,16 @@ CREATE POLICY "Owner update tournaments"
 ON tournaments FOR UPDATE
 USING (auth.uid() = created_by);
 
+CREATE POLICY "Admin delete tournaments"
+ON tournaments FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM user_profiles
+    WHERE user_profiles.user_id = auth.uid()
+    AND user_profiles.role = 'Admin'
+  )
+);
+
 -- Teams
 CREATE POLICY "Public read teams"
 ON teams FOR SELECT
@@ -341,6 +351,11 @@ CREATE POLICY "Users can read own profile"
   ON user_profiles FOR SELECT
   TO authenticated
   USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert own profile"
+  ON user_profiles FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can update own profile"
   ON user_profiles FOR UPDATE

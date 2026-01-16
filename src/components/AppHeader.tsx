@@ -43,6 +43,70 @@ export default async function AppHeader() {
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           {user ? (
             <>
+              {/* Role Badge - Show for Admin, Manager, and Scorer */}
+              {profile?.role === "Admin" && (
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%)",
+                    border: "1.5px solid rgba(220, 38, 38, 0.3)",
+                  }}
+                >
+                  <span className="text-base sm:text-lg">👑</span>
+                  <span
+                    className="text-xs sm:text-sm font-bold"
+                    style={{ color: "#dc2626" }}
+                  >
+                    Admin
+                  </span>
+                </div>
+              )}
+
+              {profile?.role === "Manager" && (
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(129, 140, 248, 0.1) 100%)",
+                    border: "1.5px solid rgba(99, 102, 241, 0.3)",
+                  }}
+                >
+                  <span className="text-base sm:text-lg">⚡</span>
+                  <span
+                    className="text-xs sm:text-sm font-bold"
+                    style={{ color: "#6366f1" }}
+                  >
+                    Manager
+                  </span>
+                </div>
+              )}
+
+              {profile?.role === "Scorer" && (
+                <div
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%)",
+                    border: "1.5px solid rgba(234, 179, 8, 0.3)",
+                  }}
+                >
+                  <span className="text-base sm:text-lg">🔥</span>
+                  <span
+                    className="text-xs sm:text-sm font-medium"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Credits:
+                  </span>
+                  <span
+                    className="text-xs sm:text-sm font-bold"
+                    style={{ color: "#eab308" }}
+                  >
+                    {profile.credits ?? 0}
+                  </span>
+                </div>
+              )}
+
               <Link
                 href="/profile"
                 className="text-xs sm:text-sm muted-text hidden sm:inline max-w-[150px] lg:max-w-[200px] truncate hover:text-[var(--accent)] transition-colors"

@@ -10,12 +10,16 @@ interface NewMatchDialogProps {
   isOpen: boolean;
   onClose: () => void;
   tournamentId: string;
+  userCredits?: number;
+  userRole?: string;
 }
 
 export default function NewMatchDialog({
   isOpen,
   onClose,
   tournamentId,
+  userCredits = 0,
+  userRole = "Viewer",
 }: NewMatchDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,6 +32,9 @@ export default function NewMatchDialog({
   const [savingNewTeam, setSavingNewTeam] = useState(false);
   const [selectedTeamA, setSelectedTeamA] = useState("");
   const [selectedTeamB, setSelectedTeamB] = useState("");
+
+  const isScorer = userRole === "Scorer";
+  const hasEnoughCredits = userCredits >= 1;
 
   const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
@@ -236,6 +243,32 @@ export default function NewMatchDialog({
             </button>
           </div>
 
+          {isScorer && (
+            <div
+              className="rounded-md p-3 text-sm mb-4"
+              style={{
+                background: hasEnoughCredits
+                  ? "color-mix(in srgb, var(--accent) 10%, transparent)"
+                  : "color-mix(in srgb, var(--destructive) 10%, transparent)",
+                border: hasEnoughCredits
+                  ? "1px solid var(--accent)"
+                  : "1px solid var(--destructive)",
+                color: hasEnoughCredits
+                  ? "var(--accent)"
+                  : "var(--destructive)",
+              }}
+            >
+              <p className="font-medium">
+                Your Credits: {userCredits} | Cost: 1 credit
+              </p>
+              {!hasEnoughCredits && (
+                <p className="text-xs mt-1">
+                  Insufficient credits to create a match
+                </p>
+              )}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Hidden inputs for form submission */}
             <input type="hidden" name="team_a_id" value={selectedTeamA} />
@@ -419,7 +452,7 @@ export default function NewMatchDialog({
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (isScorer && !hasEnoughCredits)}
                 className="flex-1 py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-white"
                 style={{ background: "var(--accent)" }}
               >

@@ -5,9 +5,15 @@ import NewMatchDialog from "./NewMatchDialog";
 
 interface NewMatchButtonProps {
   tournamentId: string;
+  userCredits?: number;
+  userRole?: string;
 }
 
-export default function NewMatchButton({ tournamentId }: NewMatchButtonProps) {
+export default function NewMatchButton({
+  tournamentId,
+  userCredits = 0,
+  userRole = "Viewer",
+}: NewMatchButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -23,6 +29,8 @@ export default function NewMatchButton({ tournamentId }: NewMatchButtonProps) {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         tournamentId={tournamentId}
+        userCredits={userCredits}
+        userRole={userRole}
       />
     </>
   );

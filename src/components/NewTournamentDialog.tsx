@@ -6,14 +6,21 @@ import { createTournament } from "@/app/actions/tournaments";
 interface NewTournamentDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  userCredits?: number;
+  userRole?: string;
 }
 
 export default function NewTournamentDialog({
   isOpen,
   onClose,
+  userCredits = 0,
+  userRole = "Viewer",
 }: NewTournamentDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const isScorer = userRole === "Scorer";
+  const hasEnoughCredits = userCredits >= 10;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -63,6 +70,30 @@ export default function NewTournamentDialog({
             ×
           </button>
         </div>
+
+        {isScorer && (
+          <div
+            className="rounded-md p-3 text-sm mb-4"
+            style={{
+              background: hasEnoughCredits
+                ? "color-mix(in srgb, var(--accent) 10%, transparent)"
+                : "color-mix(in srgb, var(--destructive) 10%, transparent)",
+              border: hasEnoughCredits
+                ? "1px solid var(--accent)"
+                : "1px solid var(--destructive)",
+              color: hasEnoughCredits ? "var(--accent)" : "var(--destructive)",
+            }}
+          >
+            <p className="font-medium">
+              Your Credits: {userCredits} | Cost: 10 credits
+            </p>
+            {!hasEnoughCredits && (
+              <p className="text-xs mt-1">
+                Insufficient credits to create a tournament
+              </p>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -161,7 +192,7 @@ export default function NewTournamentDialog({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (isScorer && !hasEnoughCredits)}
               className="flex-1 py-2 px-4 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed text-white"
               style={{ background: "var(--accent)" }}
             >

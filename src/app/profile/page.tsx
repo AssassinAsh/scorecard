@@ -4,6 +4,7 @@ import { getUser } from "@/app/actions/auth";
 import { getProfile, getUserTournamentAccess } from "@/app/actions/profile";
 import { getUserRole } from "@/app/actions/tournaments";
 import ProfileEditor from "@/components/ProfileEditor";
+import BecomeScorerButton from "@/components/BecomeScorerButton";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -88,6 +89,27 @@ async function ProfileContent() {
             </div>
           </div>
 
+          {/* Become Scorer (for Viewers only) */}
+          {role === "Viewer" && (
+            <div className="cricket-card p-6">
+              <h2 className="text-lg font-semibold mb-4">Become a Scorer</h2>
+              <p className="text-sm mb-4" style={{ color: "var(--muted)" }}>
+                Upgrade to a Scorer account to create and manage your own
+                tournaments and matches. You'll receive 20 credits to get
+                started.
+              </p>
+              <div className="space-y-2 mb-4 text-sm">
+                <p>
+                  • Creating a tournament: <strong>10 credits</strong>
+                </p>
+                <p>
+                  • Creating a match: <strong>1 credit</strong>
+                </p>
+              </div>
+              <BecomeScorerButton />
+            </div>
+          )}
+
           {/* Edit Profile */}
           <ProfileEditor
             firstName={profile?.first_name || ""}
@@ -107,17 +129,20 @@ async function ProfileContent() {
               ) : (
                 <div className="space-y-2">
                   {tournamentAccess.map((access) => (
-                    <div
+                    <Link
                       key={access.tournament_id}
-                      className="p-3 rounded-md"
-                      style={{ background: "var(--background)" }}
+                      href={`/tournament/${access.tournament_id}`}
+                      className="tournament-access-link block p-3 rounded-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      style={{
+                        background: "var(--background)",
+                      }}
                     >
                       <p className="font-medium">{access.tournament_name}</p>
                       <p className="text-sm" style={{ color: "var(--muted)" }}>
                         Granted{" "}
                         {new Date(access.granted_at).toLocaleDateString()}
                       </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

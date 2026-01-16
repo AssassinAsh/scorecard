@@ -3,10 +3,13 @@ import {
   getTournamentById,
   hasAccess,
   isAdmin,
+  getUserRole,
 } from "@/app/actions/tournaments";
 import { getMatchesByTournament } from "@/app/actions/matches";
+import { getProfile } from "@/app/actions/profile";
 import { createClient } from "@/lib/supabase/server";
 import NewMatchButton from "@/components/NewMatchButton";
+import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import { TournamentSkeleton } from "@/components/Skeletons";
 import TournamentMatchList from "@/components/TournamentMatchList";
 
@@ -48,6 +51,8 @@ async function TournamentPageContent({
   // Check if user has scorer access
   const hasScorerAccess = user ? await hasAccess(id) : false;
   const admin = user ? await isAdmin() : false;
+  const profile = user ? await getProfile() : null;
+  const role = user ? await getUserRole() : "Viewer";
 
   const matches = await getMatchesByTournament(id);
 
@@ -166,21 +171,37 @@ async function TournamentPageContent({
 
       <main className="max-w-4xl mx-auto px-4 py-4">
         <div className="mb-4">
-          <h1 className="text-lg sm:text-xl font-medium team-name">
-            {tournament.name}
-          </h1>
-          <p className="text-sm mt-1 muted-text">
-            {tournament.location} •{" "}
-            {new Date(tournament.start_date).toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })}
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <h1 className="text-lg sm:text-xl font-medium team-name">
+                {tournament.name}
+              </h1>
+              <p className="text-sm mt-1 muted-text">
+                {tournament.location} •{" "}
+                {new Date(tournament.start_date).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
+            {admin && (
+              <DeleteTournamentButton
+                tournamentId={id}
+                tournamentName={tournament.name}
+              />
+            )}
+          </div>
         </div>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-base font-medium px-2">Matches</h2>
-          {hasScorerAccess && <NewMatchButton tournamentId={id} />}
+          {hasScorerAccess && (
+            <NewMatchButton
+              tournamentId={id}
+              userCredits={profile?.credits ?? 0}
+              userRole={role}
+            />
+          )}
         </div>
 
         <TournamentMatchList

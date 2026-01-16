@@ -11,10 +11,11 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 - **Google Authentication**: Sign-in with Google Identity Services (client-side, no redirect)
 - **User Profiles**: Email, name, role, and credits management
-- **Admin**: Full system access - create tournaments, manage matches, delete matches, score anywhere
-- **Manager**: Create tournaments and matches, score in any tournament (cannot delete matches)
-- **Scorer**: Create matches and score in assigned tournaments only
-- **Viewer**: View-only access with fullscreen display capability
+- **Credit System**: Scorers use credits to create tournaments (10 credits) and matches (1 credit)
+- **Admin**: Full system access - create tournaments/matches, delete tournaments/matches, score anywhere, no credit costs
+- **Manager**: Create tournaments and matches, score in any tournament (cannot delete), no credit costs
+- **Scorer**: Upgrade from Viewer (20 initial credits), create tournaments (10 credits) and matches (1 credit), score in assigned tournaments
+- **Viewer**: View-only access with fullscreen display capability, can upgrade to Scorer
 - **Public**: Browse tournaments and matches, view live scorecards
 
 ### 🎯 For Authenticated Users
@@ -157,20 +158,21 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 ### User Roles Overview
 
-| Role        | Create Tournaments | Create Matches   | Delete Matches | Score            | Fullscreen Display |
-| ----------- | ------------------ | ---------------- | -------------- | ---------------- | ------------------ |
-| **Admin**   | ✅ All             | ✅ All           | ✅ All         | ✅ All           | ✅ Yes             |
-| **Manager** | ✅ All             | ✅ All           | ❌ No          | ✅ All           | ✅ Yes             |
-| **Scorer**  | ❌ No              | ✅ Assigned only | ❌ No          | ✅ Assigned only | ✅ Yes             |
-| **Viewer**  | ❌ No              | ❌ No            | ❌ No          | ❌ No            | ✅ Yes             |
-| **Public**  | ❌ No              | ❌ No            | ❌ No          | ❌ No            | ❌ No              |
+| Role        | Create Tournaments  | Create Matches  | Delete Tournaments | Delete Matches | Score            | Credits     | Fullscreen Display |
+| ----------- | ------------------- | --------------- | ------------------ | -------------- | ---------------- | ----------- | ------------------ |
+| **Admin**   | ✅ All              | ✅ All          | ✅ All             | ✅ All         | ✅ All           | No cost     | ✅ Yes             |
+| **Manager** | ✅ All              | ✅ All          | ❌ No              | ❌ No          | ✅ All           | No cost     | ✅ Yes             |
+| **Scorer**  | ✅ Yes (10 credits) | ✅ Assigned (1) | ❌ No              | ❌ No          | ✅ Assigned only | 20 initial  | ✅ Yes             |
+| **Viewer**  | ❌ No               | ❌ No           | ❌ No              | ❌ No          | ❌ No            | Can upgrade | ✅ Yes             |
+| **Public**  | ❌ No               | ❌ No           | ❌ No              | ❌ No          | ❌ No            | N/A         | ❌ No              |
 
 ### Admin & Manager Users
 
 Admin and Manager accounts have elevated privileges:
 
-- **Create Tournaments**: Can create new tournaments
-- **Full Match Access**: Can create matches in any tournament
+- **Create Tournaments**: Can create new tournaments (no credit cost)
+- **Delete Tournaments**: Only Admin can delete tournaments
+- **Full Match Access**: Can create matches in any tournament (no credit cost)
 - **Universal Scoring**: Can score in any match
 - **Delete Matches**: Only Admin can delete matches
 - **Fullscreen Display**: Access to fullscreen mode for live matches
@@ -181,29 +183,41 @@ See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation
 
 1. **Sign In** at `/login` with your Google account
 2. **Complete Profile**: Add your name during onboarding (first sign-in only)
-3. **View Tournaments**: See all tournaments
-4. **Tournament Access**:
-   - Can create matches and score in assigned tournaments
-   - Read-only "spectator mode" for tournaments without access
-5. **Create Match** under accessible tournaments
-6. **Setup Match**:
+3. **Upgrade to Scorer**:
+   - New users start as Viewers (view-only access)
+   - Visit profile page and click "Become a Scorer"
+   - Receive 20 credits to get started
+4. **Credit Management**:
+   - Creating a tournament costs 10 credits
+   - Creating a match costs 1 credit
+   - Credits displayed in header (🔥 Credits: X)
+   - Auto-granted access to tournaments you create
+   - All Scorers have access to "Test Tournament" for practice
+5. **Tournament Access**:
+   - Can create matches and score in tournaments you created
+   - Can score in tournaments you're assigned to
+   - Read-only "spectator mode" for other tournaments
+6. **Create Tournament** (10 credits)
+7. **Create Match** (1 credit) under accessible tournaments
+8. **Setup Match**:
    - Add team names
    - Set overs per innings
    - Configure toss details
-7. **Add Players** (11 per team)
-8. **Start Scoring**:
-   - Select striker, non-striker, and bowler
-   - Record each ball with run buttons or extras
-   - Handle wickets with detailed dismissal forms
-   - System automatically manages strike rotation and over completion
+9. **Add Players** (11 per team)
+10. **Start Scoring**:
+    - Select striker, non-striker, and bowler
+    - Record each ball with run buttons or extras
+    - Handle wickets with detailed dismissal forms
+    - System automatically manages strike rotation and over completion
 
 ### Viewer Users
 
 1. **Sign In** at `/login` with your Google account
 2. **Complete Profile**: Add your name during onboarding (first sign-in only)
 3. **Browse**: View all tournaments and matches
-4. **Fullscreen Display**: Access `/match/[id]/display` for fullscreen mode
-5. **Public Pages**: Same access as unauthenticated users for scorecards
+4. **Upgrade to Scorer**: Visit profile page and click "Become a Scorer" to receive 20 credits
+5. **Fullscreen Display**: Access `/match/[id]/display` for fullscreen mode
+6. **Public Pages**: Same access as unauthenticated users for scorecards
 
 ### Public Access (Unauthenticated)
 

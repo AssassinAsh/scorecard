@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getTournaments, canCreateTournament } from "./actions/tournaments";
+import {
+  getTournaments,
+  canCreateTournament,
+  getUserRole,
+} from "./actions/tournaments";
 import { getUser } from "./actions/auth";
+import { getProfile } from "./actions/profile";
 import NewTournamentButton from "@/components/NewTournamentButton";
 import TournamentQrButton from "@/components/TournamentQrButton";
 import { RootSkeleton } from "@/components/Skeletons";
@@ -18,7 +23,11 @@ async function HomeContent() {
   const tournaments = await getTournaments();
   const user = await getUser();
 
-  // Check if user can create tournaments (Admin or Manager)
+  // Get user profile and role for credits display
+  const profile = user ? await getProfile() : null;
+  const role = user ? await getUserRole() : "Viewer";
+
+  // Check if user can create tournaments (Admin, Manager, or Scorer with credits)
   const canCreate = user ? await canCreateTournament() : false;
 
   return (
@@ -58,7 +67,11 @@ async function HomeContent() {
               available
             </p>
           </div>
-          <NewTournamentButton canCreate={canCreate} />
+          <NewTournamentButton
+            canCreate={canCreate}
+            userCredits={profile?.credits ?? 0}
+            userRole={role}
+          />
         </div>
 
         {tournaments.length === 0 ? (

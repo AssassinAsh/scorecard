@@ -123,3 +123,12 @@ button[type="reset"] {
 .muted-text {
   color: var(--muted);
 }
+
+.tournament-access-link {
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tournament-access-link:hover {
+  border-color: var(--accent);
+}

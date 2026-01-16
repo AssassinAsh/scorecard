@@ -40,7 +40,7 @@ export default function GoogleSignInButton() {
             });
 
             if (error) {
-              setError(error.message);
+              setError(`Sign in failed: ${error.message}`);
               setLoading(false);
             } else if (data.session) {
               // Ensure email is saved in profile

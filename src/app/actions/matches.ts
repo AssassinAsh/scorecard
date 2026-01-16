@@ -29,6 +29,26 @@ export async function createMatch(formData: CreateMatchForm) {
     return { error: "No permission to create matches in this tournament" };
   }
 
+  // Get user profile for credits check
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("role, credits")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!profile) {
+    return { error: "Profile not found" };
+  }
+
+  // Scorers need 1 credit to create a match
+  if (profile.role === "Scorer") {
+    if (profile.credits < 1) {
+      return {
+        error: "Insufficient credits. You need 1 credit to create a match.",
+      };
+    }
+  }
+
   const { data, error } = await supabase
     .from("matches")
     .insert({
@@ -45,6 +65,14 @@ export async function createMatch(formData: CreateMatchForm) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Deduct 1 credit for Scorers (Admin and Manager don't pay)
+  if (profile.role === "Scorer") {
+    await supabase
+      .from("user_profiles")
+      .update({ credits: profile.credits - 1 })
+      .eq("user_id", user.id);
   }
 
   // Auto-populate match players from persistent team rosters (team_players)
