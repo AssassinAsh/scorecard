@@ -34,7 +34,7 @@ export default function NewMatchDialog({
   const [selectedTeamB, setSelectedTeamB] = useState("");
 
   const isScorer = userRole === "Scorer";
-  const hasEnoughCredits = userCredits >= 1;
+  const hasEnoughCredits = userCredits >= 5;
 
   const loadTeams = useCallback(async () => {
     setLoadingTeams(true);
@@ -259,7 +259,7 @@ export default function NewMatchDialog({
               }}
             >
               <p className="font-medium">
-                Your Credits: {userCredits} | Cost: 1 credit
+                Your Credits: {userCredits} | Cost: 5 credits
               </p>
               {!hasEnoughCredits && (
                 <p className="text-xs mt-1">

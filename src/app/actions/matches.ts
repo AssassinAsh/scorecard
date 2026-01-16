@@ -40,11 +40,11 @@ export async function createMatch(formData: CreateMatchForm) {
     return { error: "Profile not found" };
   }
 
-  // Scorers need 1 credit to create a match
+  // Scorers need 5 credits to create a match
   if (profile.role === "Scorer") {
-    if (profile.credits < 1) {
+    if (profile.credits < 5) {
       return {
-        error: "Insufficient credits. You need 1 credit to create a match.",
+        error: "Insufficient credits. You need 5 credits to create a match.",
       };
     }
   }
@@ -67,11 +67,11 @@ export async function createMatch(formData: CreateMatchForm) {
     return { error: error.message };
   }
 
-  // Deduct 1 credit for Scorers (Admin and Manager don't pay)
+  // Deduct 5 credits for Scorers (Admin and Manager don't pay)
   if (profile.role === "Scorer") {
     await supabase
       .from("user_profiles")
-      .update({ credits: profile.credits - 1 })
+      .update({ credits: profile.credits - 5 })
       .eq("user_id", user.id);
   }
 
