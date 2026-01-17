@@ -109,7 +109,7 @@ export default async function AppHeader() {
 
               <Link
                 href="/profile"
-                className="text-xs sm:text-sm muted-text hidden sm:inline max-w-[150px] lg:max-w-[200px] truncate hover:text-[var(--accent)] transition-colors"
+                className="text-xs sm:text-sm muted-text max-w-[100px] sm:max-w-[150px] lg:max-w-[200px] truncate hover:text-[var(--accent)] transition-colors"
                 title={displayName}
               >
                 {displayName}
