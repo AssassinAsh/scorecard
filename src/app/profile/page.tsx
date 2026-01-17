@@ -71,7 +71,22 @@ async function ProfileContent() {
                 <label className="text-sm" style={{ color: "var(--muted)" }}>
                   Credits
                 </label>
-                <p className="font-medium">{profile?.credits ?? 0}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="font-medium">{profile?.credits ?? 0}</p>
+                  <a
+                    href="tel:+919907321792"
+                    className="px-3 py-1 text-xs font-medium rounded-md transition-all hover:scale-105 active:scale-95"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)",
+                      color: "white",
+                      border: "none",
+                    }}
+                    title="Contact us for credit queries"
+                  >
+                    📞 Contact for Credits
+                  </a>
+                </div>
               </div>
 
               <div>

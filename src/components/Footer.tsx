@@ -25,22 +25,35 @@ export default function Footer() {
               CrickSnap
             </span>
           </div>
-          <p className="text-xs sm:text-sm muted-text text-center sm:text-right">
-            Developed with ❤️ by{" "}
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
             <a
-              href="https://www.ashvinrokade.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[var(--accent)] transition-colors"
+              href="tel:+919907321792"
+              className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
               style={{
-                color: "var(--accent)",
-                textDecoration: "none",
-                fontWeight: 500,
+                background: "linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)",
+                color: "white",
+                border: "none",
               }}
             >
-              Ashvin Rokade
+              📞 Contact Us
             </a>
-          </p>
+            <p className="text-xs sm:text-sm muted-text text-center sm:text-right">
+              Developed with ❤️ by{" "}
+              <a
+                href="https://www.ashvinrokade.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[var(--accent)] transition-colors"
+                style={{
+                  color: "var(--accent)",
+                  textDecoration: "none",
+                  fontWeight: 500,
+                }}
+              >
+                Ashvin Rokade
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
