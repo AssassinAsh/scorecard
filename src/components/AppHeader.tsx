@@ -5,6 +5,7 @@ import BackButton from "./BackButton";
 import Link from "next/link";
 
 export default async function AppHeader() {
+  // Parallelize auth queries to reduce blocking time
   const user = await getUser();
   const profile = user ? await getProfile() : null;
 

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import {
@@ -32,6 +33,38 @@ import RealtimeRefresh from "@/components/RealtimeRefresh";
 import { hasAccess, isAdmin } from "@/app/actions/tournaments";
 import { MatchSkeleton } from "@/components/Skeletons";
 import MatchHeader from "@/components/MatchHeader";
+
+// Enable ISR: Regenerate match page every 15 seconds for near real-time updates
+export const revalidate = 15;
+
+// Generate metadata for SEO and social sharing
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const match = await getMatchById(id);
+
+  if (!match) {
+    return {
+      title: "Match Not Found - CrickSnap",
+    };
+  }
+
+  const title = `${match.team_a_name} vs ${match.team_b_name} - CrickSnap`;
+  const description = `Live cricket score: ${match.team_a_name} vs ${match.team_b_name}. Follow ball-by-ball updates and full scorecard.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+  };
+}
 
 type LiveBattingRow = {
   playerId: string;
@@ -164,10 +197,10 @@ async function MatchPageContent({
 
   if (displayInnings && inningsDetail) {
     const battingPlayersForInnings = players.filter(
-      (p) => p.team === displayInnings.batting_team
+      (p) => p.team === displayInnings.batting_team,
     );
     const bowlingPlayersForInnings = players.filter(
-      (p) => p.team === displayInnings.bowling_team
+      (p) => p.team === displayInnings.bowling_team,
     );
 
     // Use shared stat calculation utilities
@@ -175,7 +208,7 @@ async function MatchPageContent({
     const bowlingStatsMap = calculateBowlingStats(inningsDetail);
     const dismissalMap = buildDismissalMap(
       inningsDetail,
-      bowlingPlayersForInnings
+      bowlingPlayersForInnings,
     );
 
     const retirementMap = new Map<string, string>();
@@ -260,8 +293,8 @@ async function MatchPageContent({
       winnerSide === "A"
         ? match.team_a_name
         : winnerSide === "B"
-        ? match.team_b_name
-        : null;
+          ? match.team_b_name
+          : null;
 
     if (winnerName) {
       const firstRuns = firstInningsCompleted.total_runs;
@@ -278,7 +311,7 @@ async function MatchPageContent({
         // Chasing team won by wickets
         const wicketsRemaining = Math.max(
           10 - secondInningsCompleted.wickets,
-          1
+          1,
         );
         matchResult = `${winnerName} won by ${wicketsRemaining} wicket${
           wicketsRemaining === 1 ? "" : "s"
@@ -299,10 +332,10 @@ async function MatchPageContent({
 
     if (firstDetail && firstDetail.overs) {
       const battingPlayersForFirst = players.filter(
-        (p) => p.team === firstCompletedInnings.batting_team
+        (p) => p.team === firstCompletedInnings.batting_team,
       );
       const bowlingPlayersForFirst = players.filter(
-        (p) => p.team === firstCompletedInnings.bowling_team
+        (p) => p.team === firstCompletedInnings.bowling_team,
       );
 
       const firstBattingStats = new Map<
@@ -381,7 +414,7 @@ async function MatchPageContent({
           for (const ball of overBalls) {
             const runsConceded = calculateBallRuns(
               ball.runs_off_bat,
-              ball.extras_runs
+              ball.extras_runs,
             );
             runsThisOver += runsConceded;
 
@@ -469,8 +502,8 @@ async function MatchPageContent({
       firstInningsRunRate = formatRunRate(
         calculateRunRate(
           firstCompletedInnings.total_runs,
-          firstCompletedInnings.balls_bowled
-        )
+          firstCompletedInnings.balls_bowled,
+        ),
       );
 
       const firstBattingAppearanceOrder =
@@ -601,8 +634,12 @@ async function MatchPageContent({
             bowlingTeam={displayInnings.bowling_team}
             teamAName={match.team_a_name}
             teamBName={match.team_b_name}
-            teamAContact={canEditContacts ? match.team_a_contact ?? null : null}
-            teamBContact={canEditContacts ? match.team_b_contact ?? null : null}
+            teamAContact={
+              canEditContacts ? (match.team_a_contact ?? null) : null
+            }
+            teamBContact={
+              canEditContacts ? (match.team_b_contact ?? null) : null
+            }
             currentScore={displayInnings.total_runs}
             currentWickets={displayInnings.wickets}
             ballsBowled={displayInnings.balls_bowled}

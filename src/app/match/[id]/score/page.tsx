@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import {
   getCurrentInnings,
@@ -29,6 +30,29 @@ import {
 import ScoringInterface from "@/components/ScoringInterface";
 import InningsButton from "@/components/InningsButton";
 import RealtimeRefresh from "@/components/RealtimeRefresh";
+
+// Enable ISR with very short revalidation for live scoring page
+export const revalidate = 10;
+
+// Generate metadata
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const match = await getMatchById(id);
+
+  if (!match) {
+    return { title: "Match Not Found - CrickSnap" };
+  }
+
+  return {
+    title: `Score: ${match.team_a_name} vs ${match.team_b_name} - CrickSnap`,
+    description: `Live scoring interface for ${match.team_a_name} vs ${match.team_b_name}`,
+    robots: "noindex", // Don't index scoring interface (private)
+  };
+}
 
 type LiveBattingRow = {
   playerId: string;
@@ -136,8 +160,8 @@ export default async function ScoringPage({
       winnerSide === "A"
         ? match.team_a_name
         : winnerSide === "B"
-        ? match.team_b_name
-        : null;
+          ? match.team_b_name
+          : null;
 
     if (winnerName) {
       const firstRuns = firstInningsCompleted.total_runs;
@@ -152,7 +176,7 @@ export default async function ScoringPage({
       } else if (winnerSide === secondInningsCompleted.batting_team) {
         const wicketsRemaining = Math.max(
           10 - secondInningsCompleted.wickets,
-          1
+          1,
         );
         matchResult = `${winnerName} won by ${wicketsRemaining} wicket${
           wicketsRemaining === 1 ? "" : "s"
@@ -191,10 +215,10 @@ export default async function ScoringPage({
 
   if (displayInnings && inningsDetail) {
     const battingPlayersForInnings = players.filter(
-      (p) => p.team === displayInnings.batting_team
+      (p) => p.team === displayInnings.batting_team,
     );
     const bowlingPlayersForInnings = players.filter(
-      (p) => p.team === displayInnings.bowling_team
+      (p) => p.team === displayInnings.bowling_team,
     );
 
     // Use shared stat calculation utilities
@@ -202,7 +226,7 @@ export default async function ScoringPage({
     const bowlingStatsMap = calculateBowlingStats(inningsDetail);
     const dismissalMap = buildDismissalMap(
       inningsDetail,
-      bowlingPlayersForInnings
+      bowlingPlayersForInnings,
     );
 
     const retirementMap = new Map<string, string>();
@@ -281,10 +305,10 @@ export default async function ScoringPage({
 
     if (firstDetail) {
       const battingPlayersForFirst = players.filter(
-        (p) => p.team === firstCompletedInnings.batting_team
+        (p) => p.team === firstCompletedInnings.batting_team,
       );
       const bowlingPlayersForFirst = players.filter(
-        (p) => p.team === firstCompletedInnings.bowling_team
+        (p) => p.team === firstCompletedInnings.bowling_team,
       );
 
       // Use shared stat calculation utilities
@@ -292,15 +316,15 @@ export default async function ScoringPage({
       const firstBowlingStats = calculateBowlingStats(firstDetail);
       const firstDismissalMap = buildDismissalMap(
         firstDetail,
-        bowlingPlayersForFirst
+        bowlingPlayersForFirst,
       );
 
       firstInningsExtras = calculateExtras(firstDetail);
       firstInningsRunRate = formatRunRate(
         calculateRunRate(
           firstCompletedInnings.total_runs,
-          firstCompletedInnings.balls_bowled
-        )
+          firstCompletedInnings.balls_bowled,
+        ),
       );
 
       const firstBattingAppearanceOrder =

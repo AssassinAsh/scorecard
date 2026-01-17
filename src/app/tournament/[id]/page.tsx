@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import {
   getTournamentById,
   hasAccess,
@@ -12,6 +13,35 @@ import NewMatchButton from "@/components/NewMatchButton";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import { TournamentSkeleton } from "@/components/Skeletons";
 import TournamentMatchList from "@/components/TournamentMatchList";
+
+// Enable ISR: Regenerate page every 30 seconds
+export const revalidate = 30;
+
+// Generate metadata for SEO
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const tournament = await getTournamentById(id);
+
+  if (!tournament) {
+    return {
+      title: "Tournament Not Found - CrickSnap",
+    };
+  }
+
+  return {
+    title: `${tournament.name} - CrickSnap`,
+    description: `View live scores and matches for ${tournament.name}. Real-time cricket scoring and tournament management.`,
+    openGraph: {
+      title: `${tournament.name} - CrickSnap`,
+      description: `View live scores and matches for ${tournament.name}`,
+      type: "website",
+    },
+  };
+}
 
 export default function TournamentPage(props: {
   params: Promise<{ id: string }>;

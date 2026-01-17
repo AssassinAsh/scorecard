@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import {
   getTournaments,
   canCreateTournament,
@@ -11,6 +12,15 @@ import NewTournamentButton from "@/components/NewTournamentButton";
 import TournamentQrButton from "@/components/TournamentQrButton";
 import { RootSkeleton } from "@/components/Skeletons";
 
+// Enable ISR: Regenerate page every 60 seconds
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "CrickSnap - Live Cricket Scoring & Tournament Management",
+  description:
+    "Create cricket tournaments, score matches live, and share scorecards instantly. Free real-time cricket scoring app.",
+};
+
 export default function Home() {
   return (
     <Suspense fallback={<RootSkeleton />}>
@@ -20,15 +30,13 @@ export default function Home() {
 }
 
 async function HomeContent() {
-  const tournaments = await getTournaments();
-  const user = await getUser();
+  // Parallelize all independent queries to reduce TTFB
+  const [tournaments, user] = await Promise.all([getTournaments(), getUser()]);
 
-  // Get user profile and role for credits display
-  const profile = user ? await getProfile() : null;
-  const role = user ? await getUserRole() : "Viewer";
-
-  // Check if user can create tournaments (Admin, Manager, or Scorer with credits)
-  const canCreate = user ? await canCreateTournament() : false;
+  // Only fetch profile/role if user exists (dependent query)
+  const [profile, role, canCreate] = user
+    ? await Promise.all([getProfile(), getUserRole(), canCreateTournament()])
+    : [null, "Viewer" as const, false];
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
@@ -115,7 +123,7 @@ async function HomeContent() {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
-                      }
+                      },
                     )}
                   </span>
                 </div>
