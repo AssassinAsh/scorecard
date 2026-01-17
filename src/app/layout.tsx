@@ -77,6 +77,7 @@ export default function RootLayout({
           }}
         >
           <GoogleAnalytics />
+          <SpeedInsights />
           <AppHeader />
           <div style={{ flex: 1 }}>{children}</div>
           <Footer />

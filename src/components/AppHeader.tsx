@@ -8,26 +8,25 @@ export default async function AppHeader() {
   const user = await getUser();
   const profile = user ? await getProfile() : null;
 
-  const displayName =
-    profile?.first_name && profile?.last_name
-      ? `${profile.first_name} ${profile.last_name}`
-      : profile?.email || user?.email;
+  const displayName = profile?.first_name
+    ? profile.first_name
+    : profile?.email || user?.email;
 
   return (
     <header
       className="cricket-card sticky top-0 z-20 border-b shadow-sm backdrop-blur-sm bg-opacity-95"
       style={{ background: "var(--card-bg)" }}
     >
-      <div className="max-w-6xl mx-auto px-3 py-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-6xl mx-auto px-2 py-2.5 sm:px-6 sm:py-3 flex items-center justify-between gap-1.5 sm:gap-4">
         <BackButton />
 
         <Link
           href="/"
-          className="flex items-center gap-2 sm:gap-3 flex-1 justify-center hover:opacity-80 transition-opacity"
+          className="flex items-center gap-1.5 sm:gap-3 hover:opacity-80 transition-opacity"
         >
-          <span className="text-2xl sm:text-3xl">🏏</span>
+          <span className="text-xl sm:text-3xl">🏏</span>
           <h1
-            className="text-lg sm:text-2xl font-bold tracking-tight"
+            className="text-base sm:text-2xl font-bold tracking-tight whitespace-nowrap"
             style={{
               background:
                 "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%)",
@@ -40,22 +39,23 @@ export default async function AppHeader() {
           </h1>
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0 ml-auto">
           {user ? (
             <>
               {/* Role Badge - Show for Admin, Manager, and Scorer */}
               {profile?.role === "Admin" && (
                 <div
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg"
+                  className="flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 sm:px-3 sm:py-2 rounded-lg"
                   style={{
                     background:
                       "linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%)",
                     border: "1.5px solid rgba(220, 38, 38, 0.3)",
                   }}
+                  title="Admin"
                 >
                   <span className="text-base sm:text-lg">👑</span>
                   <span
-                    className="text-xs sm:text-sm font-bold"
+                    className="hidden sm:inline text-xs sm:text-sm font-bold"
                     style={{ color: "#dc2626" }}
                   >
                     Admin
@@ -65,16 +65,17 @@ export default async function AppHeader() {
 
               {profile?.role === "Manager" && (
                 <div
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg"
+                  className="flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 sm:px-3 sm:py-2 rounded-lg"
                   style={{
                     background:
                       "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(129, 140, 248, 0.1) 100%)",
                     border: "1.5px solid rgba(99, 102, 241, 0.3)",
                   }}
+                  title="Manager"
                 >
                   <span className="text-base sm:text-lg">⚡</span>
                   <span
-                    className="text-xs sm:text-sm font-bold"
+                    className="hidden sm:inline text-xs sm:text-sm font-bold"
                     style={{ color: "#6366f1" }}
                   >
                     Manager
@@ -84,16 +85,17 @@ export default async function AppHeader() {
 
               {profile?.role === "Scorer" && (
                 <div
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg"
+                  className="flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 sm:px-3 sm:py-2 rounded-lg"
                   style={{
                     background:
                       "linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%)",
                     border: "1.5px solid rgba(234, 179, 8, 0.3)",
                   }}
+                  title={`Credits: ${profile.credits ?? 0}`}
                 >
                   <span className="text-base sm:text-lg">🔥</span>
                   <span
-                    className="text-xs sm:text-sm font-medium"
+                    className="hidden sm:inline text-xs sm:text-sm font-medium"
                     style={{ color: "var(--muted)" }}
                   >
                     Credits:
@@ -109,7 +111,7 @@ export default async function AppHeader() {
 
               <Link
                 href="/profile"
-                className="text-xs sm:text-sm muted-text max-w-[100px] sm:max-w-[150px] lg:max-w-[200px] truncate hover:text-[var(--accent)] transition-colors"
+                className="text-xs sm:text-sm muted-text max-w-[80px] sm:max-w-[150px] lg:max-w-[200px] truncate hover:text-[var(--accent)] transition-colors"
                 title={displayName}
               >
                 {displayName}
@@ -117,7 +119,7 @@ export default async function AppHeader() {
               <form action={logout}>
                 <button
                   type="submit"
-                  className="px-2.5 py-1.5 sm:px-3 text-xs sm:text-sm rounded-lg hover:bg-[var(--border)] transition-all active:scale-95"
+                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-lg hover:bg-[var(--border)] transition-all active:scale-95"
                   style={{
                     border: "1px solid var(--border)",
                     color: "var(--foreground)",
