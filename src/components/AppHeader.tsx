@@ -1,7 +1,8 @@
-import { getUser, logout } from "@/app/actions/auth";
+import { getUser } from "@/app/actions/auth";
 import { getProfile } from "@/app/actions/profile";
 import LoginDialog from "./LoginDialog";
 import BackButton from "./BackButton";
+import ProfileDropdown from "./ProfileDropdown";
 import Link from "next/link";
 
 export default async function AppHeader() {
@@ -11,7 +12,7 @@ export default async function AppHeader() {
 
   const displayName = profile?.first_name
     ? profile.first_name
-    : profile?.email || user?.email;
+    : profile?.email || user?.email || "User";
 
   return (
     <header
@@ -110,25 +111,7 @@ export default async function AppHeader() {
                 </div>
               )}
 
-              <Link
-                href="/profile"
-                className="text-xs sm:text-sm muted-text max-w-[80px] sm:max-w-[150px] lg:max-w-[200px] truncate hover:text-[var(--accent)] transition-colors"
-                title={displayName}
-              >
-                {displayName}
-              </Link>
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-lg hover:bg-[var(--border)] transition-all active:scale-95"
-                  style={{
-                    border: "1px solid var(--border)",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  Logout
-                </button>
-              </form>
+              <ProfileDropdown displayName={displayName} />
             </>
           ) : (
             <LoginDialog />

@@ -31,19 +31,7 @@ async function ProfileContent() {
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Profile</h1>
-          <Link
-            href="/"
-            className="text-sm px-4 py-2 rounded-md"
-            style={{
-              border: "1px solid var(--border)",
-              color: "var(--foreground)",
-            }}
-          >
-            Back to Home
-          </Link>
-        </div>
+        <h1 className="text-2xl font-bold mb-6">Profile</h1>
 
         <div className="space-y-6">
           {/* User Info */}
