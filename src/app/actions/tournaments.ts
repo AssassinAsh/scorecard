@@ -130,6 +130,9 @@ export async function createTournament(formData: CreateTournamentForm) {
     await supabase.from("tournament_scorers").insert({
       tournament_id: data.id,
       user_id: user.id,
+      status: "approved",
+      requested_at: new Date().toISOString(),
+      approved_at: new Date().toISOString(),
     });
   }
 
@@ -155,12 +158,6 @@ export async function hasAccess(tournamentId: string): Promise<boolean> {
 
   // Scorers need explicit tournament access
   if (role === "Scorer") {
-    // All scorers have access to the Test Tournament
-    const TEST_TOURNAMENT_ID = "b2fd782e-0266-4d38-85b9-bbe873ccd8ff";
-    if (tournamentId === TEST_TOURNAMENT_ID) {
-      return true;
-    }
-
     // Check if scorer created this tournament
     const { data: tournament } = await supabase
       .from("tournaments")
@@ -172,12 +169,13 @@ export async function hasAccess(tournamentId: string): Promise<boolean> {
       return true;
     }
 
-    // Check if scorer has explicit access via tournament_scorers
+    // Check if scorer has explicit access via tournament_scorers with approved status
     const { data } = await supabase
       .from("tournament_scorers")
-      .select("id")
+      .select("id, status")
       .eq("tournament_id", tournamentId)
       .eq("user_id", user.id)
+      .eq("status", "approved")
       .single();
 
     return !!data;

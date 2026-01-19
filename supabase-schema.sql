@@ -352,6 +352,36 @@ CREATE POLICY "Users can read own profile"
   TO authenticated
   USING (user_id = auth.uid());
 
+-- Helper function to check if current user is Admin/Manager (bypasses RLS with SECURITY DEFINER)
+CREATE OR REPLACE FUNCTION current_user_can_read_all_profiles()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM user_profiles
+    WHERE user_id = auth.uid()
+    AND role IN ('Admin', 'Manager')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+CREATE POLICY "Admins and Managers can read all profiles"
+  ON user_profiles FOR SELECT
+  TO authenticated
+  USING (current_user_can_read_all_profiles());
+
+CREATE POLICY "Tournament creators can read profiles of their tournament scorers"
+  ON user_profiles FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 
+      FROM tournament_scorers ts
+      JOIN tournaments t ON t.id = ts.tournament_id
+      WHERE ts.user_id = user_profiles.user_id
+      AND t.created_by = auth.uid()
+    )
+  );
+
 CREATE POLICY "Users can insert own profile"
   ON user_profiles FOR INSERT
   TO authenticated
@@ -362,17 +392,32 @@ CREATE POLICY "Users can update own profile"
   TO authenticated
   USING (user_id = auth.uid());
 
+CREATE POLICY "Admins can update all profiles"
+  ON user_profiles FOR UPDATE
+  TO authenticated
+  USING (current_user_can_read_all_profiles());
+
 -- Tournament Scorers Table (Access control)
 CREATE TABLE IF NOT EXISTS tournament_scorers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  granted_at TIMESTAMPTZ DEFAULT now(),
+  status VARCHAR(20) DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'revoked')),
+  requested_at TIMESTAMPTZ DEFAULT now(),
+  approved_at TIMESTAMPTZ,
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  revoked_at TIMESTAMPTZ,
+  revoked_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  notes TEXT,
+  granted_at TIMESTAMPTZ DEFAULT now(), -- Deprecated: kept for backwards compatibility
   UNIQUE(tournament_id, user_id)
 );
 
 CREATE INDEX idx_tournament_scorers_tournament ON tournament_scorers(tournament_id);
 CREATE INDEX idx_tournament_scorers_user ON tournament_scorers(user_id);
+CREATE INDEX idx_tournament_scorers_status ON tournament_scorers(status);
+CREATE INDEX idx_tournament_scorers_approved_by ON tournament_scorers(approved_by);
+CREATE INDEX idx_tournament_scorers_revoked_by ON tournament_scorers(revoked_by);
 
 ALTER TABLE tournament_scorers ENABLE ROW LEVEL SECURITY;
 
@@ -380,6 +425,54 @@ CREATE POLICY "Anyone can read tournament_scorers"
   ON tournament_scorers FOR SELECT
   TO authenticated
   USING (true);
+
+CREATE POLICY "Scorers can request tournament access"
+  ON tournament_scorers FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    auth.uid() = user_id 
+    AND status = 'pending'
+    AND EXISTS (
+      SELECT 1 FROM user_profiles 
+      WHERE user_id = auth.uid() 
+      AND role = 'Scorer'
+    )
+  );
+
+CREATE POLICY "Managers can update tournament access"
+  ON tournament_scorers FOR UPDATE
+  TO authenticated
+  USING (
+    is_admin() 
+    OR is_manager()
+    OR EXISTS (
+      SELECT 1 FROM tournaments 
+      WHERE id = tournament_id 
+      AND created_by = auth.uid()
+    )
+  )
+  WITH CHECK (
+    is_admin() 
+    OR is_manager()
+    OR EXISTS (
+      SELECT 1 FROM tournaments 
+      WHERE id = tournament_id 
+      AND created_by = auth.uid()
+    )
+  );
+
+CREATE POLICY "Managers can delete tournament access"
+  ON tournament_scorers FOR DELETE
+  TO authenticated
+  USING (
+    is_admin() 
+    OR is_manager()
+    OR EXISTS (
+      SELECT 1 FROM tournaments 
+      WHERE id = tournament_id 
+      AND created_by = auth.uid()
+    )
+  );
 
 -- Helper function: Check if current user is admin
 CREATE OR REPLACE FUNCTION is_admin()
@@ -437,13 +530,14 @@ BEGIN
     RETURN true;
   END IF;
   
-  -- Scorers need explicit tournament access
+  -- Scorers need explicit tournament access with approved status
   IF user_role_value = 'Scorer' THEN
     RETURN EXISTS (
       SELECT 1 
       FROM tournament_scorers 
       WHERE tournament_id = tournament_uuid 
       AND user_id = auth.uid()
+      AND status = 'approved'
     );
   END IF;
   
@@ -451,6 +545,45 @@ BEGIN
   RETURN false;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- AUTO-GRANT TEST TOURNAMENT ACCESS TRIGGER
+-- =====================================================
+-- Automatically grant access to the Test Tournament when a user becomes a Scorer.
+-- This ensures data consistency and removes the need for hardcoded checks.
+
+-- Create the function that grants Test Tournament access
+CREATE OR REPLACE FUNCTION grant_test_tournament_access()
+RETURNS TRIGGER AS $$
+DECLARE
+  -- Test Tournament ID (update this if your Test Tournament has a different ID)
+  test_tournament_id UUID := 'b2fd782e-0266-4d38-85b9-bbe873ccd8ff';
+BEGIN
+  -- Check if role is being set to 'Scorer' (either new user or role upgrade)
+  IF NEW.role = 'Scorer' AND (OLD.role IS NULL OR OLD.role != 'Scorer') THEN
+    
+    -- Insert access grant for Test Tournament with approved status
+    -- ON CONFLICT DO NOTHING prevents errors if access already exists
+    INSERT INTO tournament_scorers (tournament_id, user_id, status, requested_at, approved_at)
+    VALUES (test_tournament_id, NEW.user_id, 'approved', now(), now())
+    ON CONFLICT (tournament_id, user_id) DO NOTHING;
+    
+    -- Log for debugging (optional - can be removed in production)
+    RAISE NOTICE 'Granted Test Tournament access to user %', NEW.user_id;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create the trigger on user_profiles table
+DROP TRIGGER IF EXISTS auto_grant_test_tournament_access ON user_profiles;
+
+CREATE TRIGGER auto_grant_test_tournament_access
+  AFTER INSERT OR UPDATE OF role
+  ON user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION grant_test_tournament_access();
 
 -- =====================================================
 -- SETUP INSTRUCTIONS

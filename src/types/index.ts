@@ -62,11 +62,35 @@ export interface UpdateProfileForm {
   last_name: string;
 }
 
+// Access status for tournament_scorers table
+export type AccessStatus = "pending" | "approved" | "revoked";
+
 export interface TournamentAccess {
   tournament_id: string;
   tournament_name: string;
-  granted_at: string;
+  granted_at: string; // Deprecated: use requested_at
+  requested_at?: string;
+  status?: AccessStatus;
 }
+
+// Full tournament scorer record with all fields
+export interface TournamentScorer {
+  id: string;
+  tournament_id: string;
+  user_id: string;
+  status: AccessStatus;
+  requested_at: string;
+  approved_at: string | null;
+  approved_by: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  notes: string | null;
+  // Joined user data
+  user_email?: string;
+  user_name?: string;
+  approver_email?: string;
+}
+
 export interface UserProfile {
   user_id: string;
   first_name: string | null;

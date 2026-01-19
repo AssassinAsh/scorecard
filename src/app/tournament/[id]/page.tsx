@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   getTournamentById,
   hasAccess,
   isAdmin,
   getUserRole,
 } from "@/app/actions/tournaments";
+import { canManageTournamentAccess } from "@/app/actions/access";
 import { getMatchesByTournament } from "@/app/actions/matches";
 import { getProfile } from "@/app/actions/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -13,6 +15,8 @@ import NewMatchButton from "@/components/NewMatchButton";
 import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import { TournamentSkeleton } from "@/components/Skeletons";
 import TournamentMatchList from "@/components/TournamentMatchList";
+import RequestAccessButton from "@/components/RequestAccessButton";
+import type { AccessStatus } from "@/types";
 
 // Enable ISR: Regenerate page every 30 seconds
 export const revalidate = 30;
@@ -83,6 +87,19 @@ async function TournamentPageContent({
   const admin = user ? await isAdmin() : false;
   const profile = user ? await getProfile() : null;
   const role = user ? await getUserRole() : "Viewer";
+  const canManageAccess = user ? await canManageTournamentAccess(id) : false;
+
+  // For Scorers without access, check their current status
+  let accessStatus: AccessStatus | null = null;
+  if (user && role === "Scorer" && !hasScorerAccess) {
+    const { data: accessRecord } = await supabase
+      .from("tournament_scorers")
+      .select("status")
+      .eq("tournament_id", id)
+      .eq("user_id", user.id)
+      .single();
+    accessStatus = (accessRecord?.status as AccessStatus) || null;
+  }
 
   const matches = await getMatchesByTournament(id);
 
@@ -187,15 +204,22 @@ async function TournamentPageContent({
 
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
-      {/* Spectator Mode Banner */}
+      {/* Access Control Banners */}
       {user && !hasScorerAccess && (
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 rounded-r">
-            <p className="font-medium">👀 Spectator Mode</p>
-            <p className="text-sm mt-1">
-              You can view this tournament but cannot make changes.
-            </p>
-          </div>
+          {role === "Scorer" ? (
+            <RequestAccessButton
+              tournamentId={id}
+              currentStatus={accessStatus}
+            />
+          ) : (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 text-yellow-800 dark:text-yellow-200 rounded-r">
+              <p className="font-medium">👀 Spectator Mode</p>
+              <p className="text-sm mt-1">
+                You can view this tournament but cannot make changes.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -215,12 +239,22 @@ async function TournamentPageContent({
                 })}
               </p>
             </div>
-            {admin && (
-              <DeleteTournamentButton
-                tournamentId={id}
-                tournamentName={tournament.name}
-              />
-            )}
+            <div className="flex items-center gap-2">
+              {canManageAccess && (
+                <Link
+                  href={`/tournament/${id}/access`}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Manage Access
+                </Link>
+              )}
+              {admin && (
+                <DeleteTournamentButton
+                  tournamentId={id}
+                  tournamentName={tournament.name}
+                />
+              )}
+            </div>
           </div>
         </div>
         <div className="flex justify-between items-center mb-3">

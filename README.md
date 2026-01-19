@@ -12,15 +12,25 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 - **Google Authentication**: Sign-in with Google Identity Services (client-side, no redirect)
 - **User Profiles**: Email, name, role, and credits management
 - **Credit System**: Scorers use credits to create tournaments (10 credits) and matches (1 credit)
-- **Admin**: Full system access - create tournaments/matches, delete tournaments/matches, score anywhere, no credit costs
-- **Manager**: Create tournaments and matches, score in any tournament (cannot delete), no credit costs
-- **Scorer**: Upgrade from Viewer (20 initial credits), create tournaments (10 credits) and matches (1 credit), score in assigned tournaments
+- **Admin Credit Recharge**: Admins can recharge credits for any user account
+- **Tournament Access Management**: Request/approve/revoke access workflow for scorers
+- **Admin**: Full system access - create tournaments/matches, delete tournaments/matches, score anywhere, no credit costs, recharge user credits
+- **Manager**: Create tournaments and matches, score in any tournament, manage tournament access (cannot delete), no credit costs
+- **Scorer**: Upgrade from Viewer (20 initial credits), create tournaments (10 credits) and matches (1 credit), score in assigned tournaments, request access to tournaments
 - **Viewer**: View-only access with fullscreen display capability, can upgrade to Scorer
 - **Public**: Browse tournaments and matches, view live scorecards
 
 ### 🎯 For Authenticated Users
 
 - **Tournament Management**: Create and organize tournaments (Admin & Manager)
+- **Tournament Access Control**: 
+  - Request access to tournaments as a Scorer
+  - Approve/deny/revoke access requests (Admin, Manager, Tournament Creator)
+  - Manage tournament scorers through dedicated access management page
+- **Admin Tools**:
+  - Recharge credits for any user account via email
+  - Manage all tournament access requests
+  - Full system oversight
 - **Match Setup**: Configure matches with team names, overs, toss details
 - **Player Management**: Add players to teams, manage batting orders
 - **Live Ball-by-Ball Scoring**:
@@ -158,13 +168,13 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 
 ### User Roles Overview
 
-| Role        | Create Tournaments  | Create Matches  | Delete Tournaments | Delete Matches | Score            | Credits     | Fullscreen Display |
-| ----------- | ------------------- | --------------- | ------------------ | -------------- | ---------------- | ----------- | ------------------ |
-| **Admin**   | ✅ All              | ✅ All          | ✅ All             | ✅ All         | ✅ All           | No cost     | ✅ Yes             |
-| **Manager** | ✅ All              | ✅ All          | ❌ No              | ❌ No          | ✅ All           | No cost     | ✅ Yes             |
-| **Scorer**  | ✅ Yes (10 credits) | ✅ Assigned (1) | ❌ No              | ❌ No          | ✅ Assigned only | 20 initial  | ✅ Yes             |
-| **Viewer**  | ❌ No               | ❌ No           | ❌ No              | ❌ No          | ❌ No            | Can upgrade | ✅ Yes             |
-| **Public**  | ❌ No               | ❌ No           | ❌ No              | ❌ No          | ❌ No            | N/A         | ❌ No              |
+| Role        | Create Tournaments  | Create Matches  | Delete Tournaments | Delete Matches | Score            | Credits     | Fullscreen Display | Manage Access | Recharge Credits |
+| ----------- | ------------------- | --------------- | ------------------ | -------------- | ---------------- | ----------- | ------------------ | ------------- | ---------------- |
+| **Admin**   | ✅ All              | ✅ All          | ✅ All             | ✅ All         | ✅ All           | No cost     | ✅ Yes             | ✅ All        | ✅ Yes           |
+| **Manager** | ✅ All              | ✅ All          | ❌ No              | ❌ No          | ✅ All           | No cost     | ✅ Yes             | ✅ All        | ❌ No            |
+| **Scorer**  | ✅ Yes (10 credits) | ✅ Assigned (1) | ❌ No              | ❌ No          | ✅ Assigned only | 20 initial  | ✅ Yes             | ✅ Request    | ❌ No            |
+| **Viewer**  | ❌ No               | ❌ No           | ❌ No              | ❌ No          | ❌ No            | Can upgrade | ✅ Yes             | ❌ No         | ❌ No            |
+| **Public**  | ❌ No               | ❌ No           | ❌ No              | ❌ No          | ❌ No            | N/A         | ❌ No              | ❌ No         | ❌ No            |
 
 ### Admin & Manager Users
 
@@ -175,6 +185,11 @@ Admin and Manager accounts have elevated privileges:
 - **Full Match Access**: Can create matches in any tournament (no credit cost)
 - **Universal Scoring**: Can score in any match
 - **Delete Matches**: Only Admin can delete matches
+- **Access Management**: View and manage tournament access requests
+- **Admin-Only Features**:
+  - Recharge credits for any user via email
+  - View all pending, approved, and revoked access requests
+  - Full administrative oversight
 - **Fullscreen Display**: Access to fullscreen mode for live matches
 
 See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation.
@@ -196,7 +211,9 @@ See [ACCESS_SETUP.md](ACCESS_SETUP.md) for complete access control documentation
 5. **Tournament Access**:
    - Can create matches and score in tournaments you created
    - Can score in tournaments you're assigned to
-   - Read-only "spectator mode" for other tournaments
+   - **Request Access**: Click "Request Access" button on any tournament
+   - Access requests can be pending, approved, or revoked
+   - Read-only "spectator mode" for tournaments without access
 6. **Create Tournament** (10 credits)
 7. **Create Match** (1 credit) under accessible tournaments
 8. **Setup Match**:
@@ -238,21 +255,25 @@ scorecard/
 │   │   │   ├── tournaments.ts    # Tournament CRUD
 │   │   │   ├── teams.ts          # Team management
 │   │   │   ├── matches.ts        # Match CRUD
-│   │   │   └── scoring.ts        # Ball recording & innings management
-│   │   ├── dashboard/            # Scorer dashboard (auth required)
-│   │   │   ├── page.tsx          # Dashboard home
-│   │   │   ├── tournament/       # Tournament management
-│   │   │   └── match/[id]/
-│   │   │       ├── setup/        # Match & player setup
-│   │   │       └── score/        # Live scoring interface
+│   │   │   ├── scoring.ts        # Ball recording & innings management
+│   │   │   ├── profile.ts        # User profile & credit recharge
+│   │   │   └── access.ts         # Tournament access management
 │   │   ├── tournament/[id]/      # Public tournament view
+│   │   │   └── access/           # Access management page (Admin/Manager/Creator)
 │   │   ├── match/[id]/           # Public match scorecard
+│   │   │   ├── score/            # Live scoring interface
+│   │   │   └── display/          # Fullscreen display mode
 │   │   ├── login/                # Authentication page
+│   │   ├── profile/              # User profile (with credit recharge for Admin)
 │   │   ├── layout.tsx            # Root layout
 │   │   └── page.tsx              # Home page
 │   ├── components/               # Reusable React components
 │   │   ├── ScoringInterface.tsx  # Main scoring UI
 │   │   ├── TossForm.tsx          # Toss configuration
+│   │   ├── RequestAccessButton.tsx   # Tournament access request
+│   │   ├── AccessManagementTable.tsx # Access management UI
+│   │   ├── RechargeCredits.tsx   # Admin credit recharge
+│   │   ├── ConfirmationModal.tsx # Reusable confirmation dialog
 │   │   ├── RealtimeRefresh.tsx   # Real-time WebSocket updates
 │   │   └── ...
 │   ├── lib/
@@ -297,11 +318,13 @@ Key tables (see `supabase-schema.sql` for complete schema):
 - **tournaments**: Tournament information
 - **teams**: Team details per tournament
 - **matches**: Match metadata, toss, status, winner
+- **tournament_scorers**: Tournament access control with request/approve/revoke workflow
 - **players**: Player information (11 per team)
 - **innings**: Innings aggregate data (runs, wickets, balls)
 - **overs**: Over-level tracking with bowler information
 - **balls**: Ball-by-ball records with runs, extras, wickets
 - **retirements**: Player retirement tracking
+- **user_profiles**: User information with roles and credits
 
 ## 🔧 Development Guide
 
@@ -358,7 +381,10 @@ npm start
 
 ## 🗺️ Roadmap / Future Enhancements
 
-- [ ] Admin UI for access management (currently via SQL)
+- [x] Tournament access management UI (request/approve/revoke)
+- [x] Admin credit recharge system
+- [x] Confirmation modals with notes for access management
+- [x] Performance optimizations (ISR, deferred analytics, parallel queries)
 - [ ] Player statistics aggregation and history
 - [ ] Match highlights and commentary system
 - [ ] Real-time WebSocket updates (Supabase Realtime)

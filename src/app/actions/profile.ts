@@ -132,7 +132,7 @@ export async function getUserTournamentAccess(): Promise<TournamentAccess[]> {
       tournaments (
         name
       )
-    `
+    `,
     )
     .eq("user_id", user.id);
 
@@ -167,28 +167,10 @@ export async function getUserTournamentAccess(): Promise<TournamentAccess[]> {
     });
   }
 
-  // Add Test Tournament for all scorers
-  const TEST_TOURNAMENT_ID = "b2fd782e-0266-4d38-85b9-bbe873ccd8ff";
-  if (!accessList.find((a) => a.tournament_id === TEST_TOURNAMENT_ID)) {
-    const { data: testTournament } = await supabase
-      .from("tournaments")
-      .select("name, created_at")
-      .eq("id", TEST_TOURNAMENT_ID)
-      .single();
-
-    if (testTournament) {
-      accessList.push({
-        tournament_id: TEST_TOURNAMENT_ID,
-        tournament_name: `${testTournament.name} (All Scorers)`,
-        granted_at: testTournament.created_at,
-      });
-    }
-  }
-
   // Sort by granted_at descending
   return accessList.sort(
     (a, b) =>
-      new Date(b.granted_at).getTime() - new Date(a.granted_at).getTime()
+      new Date(b.granted_at).getTime() - new Date(a.granted_at).getTime(),
   );
 }
 
@@ -196,7 +178,7 @@ export async function getUserTournamentAccess(): Promise<TournamentAccess[]> {
 export async function updateUserCredits(
   userId: string,
   amount: number,
-  operation: "add" | "subtract" | "set"
+  operation: "add" | "subtract" | "set",
 ) {
   const supabase = await createClient();
 
@@ -306,4 +288,67 @@ export async function becomeScorer() {
   revalidatePath("/profile");
   revalidatePath("/");
   return { success: true };
+}
+
+/**
+ * Recharge credits for a user (Admin only)
+ */
+export async function rechargeCredits(email: string, credits: number) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Not authenticated" };
+  }
+
+  // Check if current user is Admin
+  const { data: adminProfile } = await supabase
+    .from("user_profiles")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!adminProfile || adminProfile.role !== "Admin") {
+    return { error: "Unauthorized. Only admins can recharge credits." };
+  }
+
+  // Validate inputs
+  if (!email || !email.trim()) {
+    return { error: "Email is required" };
+  }
+
+  if (!credits || credits <= 0) {
+    return { error: "Credits must be a positive number" };
+  }
+
+  // Find the target user by email
+  const { data: targetProfile, error: findError } = await supabase
+    .from("user_profiles")
+    .select("user_id, email, credits, role")
+    .eq("email", email.trim().toLowerCase())
+    .single();
+
+  if (findError || !targetProfile) {
+    return { error: `User with email ${email} not found` };
+  }
+
+  // Update credits
+  const newCredits = targetProfile.credits + credits;
+  const { error: updateError } = await supabase
+    .from("user_profiles")
+    .update({ credits: newCredits })
+    .eq("user_id", targetProfile.user_id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/profile");
+  return {
+    success: true,
+    message: `Successfully added ${credits} credits to ${email}. New balance: ${newCredits}`,
+  };
 }

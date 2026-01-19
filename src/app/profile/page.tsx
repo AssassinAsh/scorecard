@@ -2,9 +2,10 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getUser } from "@/app/actions/auth";
 import { getProfile, getUserTournamentAccess } from "@/app/actions/profile";
-import { getUserRole } from "@/app/actions/tournaments";
+import { getUserRole, isAdmin } from "@/app/actions/tournaments";
 import ProfileEditor from "@/components/ProfileEditor";
 import BecomeScorerButton from "@/components/BecomeScorerButton";
+import RechargeCredits from "@/components/RechargeCredits";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -22,10 +23,11 @@ async function ProfileContent() {
     redirect("/login");
   }
 
-  const [profile, role, tournamentAccess] = await Promise.all([
+  const [profile, role, tournamentAccess, admin] = await Promise.all([
     getProfile(),
     getUserRole(),
     getUserTournamentAccess(),
+    isAdmin(),
   ]);
 
   return (
@@ -34,6 +36,9 @@ async function ProfileContent() {
         <h1 className="text-2xl font-bold mb-6">Profile</h1>
 
         <div className="space-y-6">
+          {/* Admin Recharge Section */}
+          {admin && <RechargeCredits />}
+
           {/* User Info */}
           <div className="cricket-card p-6">
             <h2 className="text-lg font-semibold mb-4">Account Information</h2>
