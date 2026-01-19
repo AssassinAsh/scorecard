@@ -23,7 +23,7 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
 ### 🎯 For Authenticated Users
 
 - **Tournament Management**: Create and organize tournaments (Admin & Manager)
-- **Tournament Access Control**: 
+- **Tournament Access Control**:
   - Request access to tournaments as a Scorer
   - Approve/deny/revoke access requests (Admin, Manager, Tournament Creator)
   - Manage tournament scorers through dedicated access management page
@@ -87,7 +87,6 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
    ```
 
 3. **Set up Supabase Database**
-
    - Create a new project at [supabase.com](https://supabase.com)
    - Go to SQL Editor in your Supabase dashboard
    - Copy and paste the entire `supabase-schema.sql` file
@@ -95,7 +94,6 @@ A full-stack cricket scoring application built with Next.js 14, TypeScript, Tail
    - Run `user-profiles-migration.sql` to create profile tables
 
 4. **Configure Google Authentication**
-
    - Create Google Cloud Console OAuth 2.0 Client ID
    - Get Client ID from Google Cloud Console
    - Add to `.env.local`: `NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id`

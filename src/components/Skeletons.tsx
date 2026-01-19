@@ -264,3 +264,59 @@ export function MatchSkeleton() {
     </div>
   );
 }
+
+export function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <div className="animate-pulse space-y-6">
+          <div
+            className="h-8 w-32 rounded-md"
+            style={{
+              background: "var(--skeleton-bg, rgba(128,134,139,0.18))",
+            }}
+          />
+
+          {/* Profile Cards */}
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-lg p-6"
+              style={{
+                background: "var(--card-bg)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              <div
+                className="h-5 w-40 rounded-md mb-4"
+                style={{
+                  background: "var(--skeleton-bg, rgba(128,134,139,0.18))",
+                }}
+              />
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((__, j) => (
+                  <div key={j} className="space-y-2">
+                    <div
+                      className="h-3 w-20 rounded-md"
+                      style={{
+                        background:
+                          "var(--skeleton-bg, rgba(128,134,139,0.12))",
+                      }}
+                    />
+                    <div
+                      className="h-4 w-48 rounded-md"
+                      style={{
+                        background:
+                          "var(--skeleton-bg, rgba(128,134,139,0.15))",
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}

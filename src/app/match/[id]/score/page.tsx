@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getMatchById, getPlayersByMatch } from "@/app/actions/matches";
 import {
@@ -30,6 +31,7 @@ import {
 import ScoringInterface from "@/components/ScoringInterface";
 import InningsButton from "@/components/InningsButton";
 import RealtimeRefresh from "@/components/RealtimeRefresh";
+import { MatchSkeleton } from "@/components/Skeletons";
 
 // Enable ISR with very short revalidation for live scoring page
 export const revalidate = 10;
@@ -76,7 +78,17 @@ type LiveBowlingRow = {
   economy: string;
 };
 
-export default async function ScoringPage({
+export default function ScoringPage(props: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense fallback={<MatchSkeleton />}>
+      <ScoringPageContent {...props} />
+    </Suspense>
+  );
+}
+
+async function ScoringPageContent({
   params,
 }: {
   params: Promise<{ id: string }>;

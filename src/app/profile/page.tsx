@@ -6,11 +6,14 @@ import { getUserRole, isAdmin } from "@/app/actions/tournaments";
 import ProfileEditor from "@/components/ProfileEditor";
 import BecomeScorerButton from "@/components/BecomeScorerButton";
 import RechargeCredits from "@/components/RechargeCredits";
+import { ProfileSkeleton } from "@/components/Skeletons";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<ProfileSkeleton />}>
       <ProfileContent />
     </Suspense>
   );
