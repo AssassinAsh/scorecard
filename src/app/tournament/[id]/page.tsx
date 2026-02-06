@@ -16,10 +16,12 @@ import DeleteTournamentButton from "@/components/DeleteTournamentButton";
 import { TournamentSkeleton } from "@/components/Skeletons";
 import TournamentMatchList from "@/components/TournamentMatchList";
 import RequestAccessButton from "@/components/RequestAccessButton";
+import TournamentRealtimeRefresh from "@/components/TournamentRealtimeRefresh";
 import type { AccessStatus } from "@/types";
 
-// Enable ISR: Regenerate page every 30 seconds
-export const revalidate = 30;
+// Enable ISR: Regenerate page every 10 minutes
+// Match updates are handled by Realtime for active users
+export const revalidate = 600;
 
 // Generate metadata for SEO
 export async function generateMetadata({
@@ -274,6 +276,8 @@ async function TournamentPageContent({
           isAdmin={admin}
           hasScorerAccess={hasScorerAccess}
         />
+
+        <TournamentRealtimeRefresh tournamentId={id} />
       </main>
     </div>
   );

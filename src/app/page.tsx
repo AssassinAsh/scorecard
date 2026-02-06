@@ -12,8 +12,9 @@ import NewTournamentButton from "@/components/NewTournamentButton";
 import TournamentQrButton from "@/components/TournamentQrButton";
 import { RootSkeleton } from "@/components/Skeletons";
 
-// Enable ISR: Regenerate page every 60 seconds
-export const revalidate = 60;
+// Enable ISR: Regenerate page every hour
+// Active users get instant updates via Realtime, so this only affects new visitors
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "CrickSnap - Live Cricket Scoring & Tournament Management",

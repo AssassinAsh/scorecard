@@ -44,7 +44,7 @@ export default function RealtimeRefresh({
 
       // Check if any modal is open (has dialog or data-state="open" attribute)
       const hasOpenModal = document.querySelector(
-        '[role="dialog"], [data-state="open"]'
+        '[role="dialog"], [data-state="open"]',
       );
 
       // Check if any input/textarea is focused
@@ -71,15 +71,26 @@ export default function RealtimeRefresh({
       }
     };
 
-    // Periodically check if we can execute pending refresh
-    let checkInterval: NodeJS.Timeout | null = null;
+    // Execute pending refresh when user interaction ends
+    // Using event listeners instead of polling reduces CPU usage significantly
+    const handleInteractionEnd = () => {
+      if (pendingRefresh && !checkUserInteraction()) {
+        router.refresh();
+        pendingRefresh = false;
+      }
+    };
+
+    // Listen for events that indicate user stopped interacting
     if (suppressDuringInput) {
-      checkInterval = setInterval(() => {
-        if (pendingRefresh && !checkUserInteraction()) {
-          router.refresh();
-          pendingRefresh = false;
-        }
-      }, 1000); // Check every second
+      // When modal closes or input loses focus
+      document.addEventListener("focusout", handleInteractionEnd);
+      // When user clicks outside (modal closes)
+      document.addEventListener("click", handleInteractionEnd);
+      // When user presses Escape (modal closes)
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") handleInteractionEnd();
+      };
+      document.addEventListener("keydown", handleEscape);
     }
 
     // Subscribe to changes on balls, innings, and matches tables
@@ -97,7 +108,7 @@ export default function RealtimeRefresh({
         () => {
           // Ball recorded/deleted - refresh with interaction check
           handleRefresh();
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -110,7 +121,7 @@ export default function RealtimeRefresh({
         () => {
           // Innings created/updated/completed - refresh
           handleRefresh();
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -123,7 +134,7 @@ export default function RealtimeRefresh({
         () => {
           // Match status changed - refresh
           handleRefresh();
-        }
+        },
       )
       .on(
         "postgres_changes",
@@ -136,12 +147,16 @@ export default function RealtimeRefresh({
         () => {
           // Players added/updated - refresh
           handleRefresh();
-        }
+        },
       )
       .subscribe();
 
     return () => {
-      if (checkInterval) clearInterval(checkInterval);
+      if (suppressDuringInput) {
+        document.removeEventListener("focusout", handleInteractionEnd);
+        document.removeEventListener("click", handleInteractionEnd);
+        document.removeEventListener("keydown", handleInteractionEnd);
+      }
       supabase.removeChannel(channel);
     };
   }, [matchId, enabled, suppressDuringInput, router]);

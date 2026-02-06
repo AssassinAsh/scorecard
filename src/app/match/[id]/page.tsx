@@ -34,8 +34,9 @@ import { hasAccess, isAdmin } from "@/app/actions/tournaments";
 import { MatchSkeleton } from "@/components/Skeletons";
 import MatchHeader from "@/components/MatchHeader";
 
-// Enable ISR: Regenerate match page every 15 seconds for near real-time updates
-export const revalidate = 15;
+// Enable ISR: Regenerate match page every 5 minutes
+// Active users get instant updates via Realtime, so this only affects new visitors
+export const revalidate = 300;
 
 // Generate metadata for SEO and social sharing
 export async function generateMetadata({

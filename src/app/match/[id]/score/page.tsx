@@ -33,8 +33,9 @@ import InningsButton from "@/components/InningsButton";
 import RealtimeRefresh from "@/components/RealtimeRefresh";
 import { MatchSkeleton } from "@/components/Skeletons";
 
-// Enable ISR with very short revalidation for live scoring page
-export const revalidate = 10;
+// Enable ISR: Regenerate scoring page every 5 minutes
+// Realtime updates provide instant refresh on ball recording, so aggressive ISR is unnecessary
+export const revalidate = 300;
 
 // Generate metadata
 export async function generateMetadata({
